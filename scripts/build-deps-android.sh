@@ -3,29 +3,36 @@ set -e
 
 source scripts/common.sh
 
-mkdir -p $SRC
-mkdir -p $DEPS
+mkdir -p src
+mkdir -p build/deps
 
-cd $SRC
+cd src
 
-# x264
+# =========================
+# x264 (FIXED)
+# =========================
 git clone https://code.videolan.org/videolan/x264.git
 cd x264
 
 ./configure \
-  --prefix=$DEPS \
+  --prefix=$BUILD/deps \
   --host=aarch64-linux-android \
+  --cross-prefix=$NDK_TOOLCHAIN/bin/aarch64-linux-android- \
+  --sysroot=$SYSROOT \
   --enable-static \
   --disable-cli \
-  --extra-cflags="-march=armv8-a+simd -O3"
+  --extra-cflags="$CFLAGS" \
+  --extra-ldflags="$LDFLAGS"
 
 make -j$(nproc)
 make install
 
-touch $DEPS/x264.built
+touch $BUILD/deps/x264.built
 cd ..
 
-# libvpx
+# =========================
+# libvpx (FIXED)
+# =========================
 git clone https://chromium.googlesource.com/webm/libvpx
 cd libvpx
 
@@ -33,10 +40,11 @@ cd libvpx
   --target=arm64-android-gcc \
   --enable-vp9 \
   --disable-examples \
-  --disable-tools
+  --disable-tools \
+  --extra-cflags="$CFLAGS"
 
 make -j$(nproc)
 make install
 
-touch $DEPS/vpx.built
+touch $BUILD/deps/vpx.built
 cd ..
