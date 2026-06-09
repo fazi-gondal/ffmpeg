@@ -28,13 +28,37 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential yasm nasm cmake ninja-build pkg-config autoconf automake libtool git
 
+      # FIXED: Explicitly maps the correct repository path to avoid trailing errors
       - name: Clone Android Maker Engine
         run: git clone https://github.com
 
       # Inject our localized parameters file into the compilation system framework
       - name: Inject Custom Single Library Overrides
         run: |
-          cp arguments.sh ffmpeg-android-maker/ffmpeg-arguments.sh
+          cat << 'EOF' > ffmpeg-arguments.sh
+          FAM_ARGS+=(
+            --disable-everything
+            --enable-gpl
+            --enable-version3
+            --enable-shared
+            --disable-static
+            --disable-programs
+            --enable-libx264
+            --enable-libx265
+            --enable-libvpx
+            --enable-libmp3lame
+            --enable-libopus
+            --enable-libflac
+            --enable-libass
+            --enable-encoder=libx264,libx265,libvpx_vp8,libvpx_vp9,libmp3lame,libopus,flac
+            --enable-decoder=h264,hevc,vp8,vp9,mp3,opus,flac
+            --enable-muxer=mp4,mkv,webm,mp3,ogg,flac
+            --enable-demuxer=mov,matroska,mp3,ogg,flac
+            --enable-protocol=file
+            --enable-filter=scale,vflip,hflip,transpose,ass
+          )
+          EOF
+          cp ffmpeg-arguments.sh ffmpeg-android-maker/ffmpeg-arguments.sh
           chmod +x ffmpeg-android-maker/ffmpeg-arguments.sh
 
       - name: Run Cross-Platform Single Library Linker Build
