@@ -1,0 +1,85 @@
+name: FFmpeg Mobile SDK (Production)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git wget build-essential yasm nasm pkg-config
+
+      - name: Setup Android NDK
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
+          unzip android-ndk-r26d-linux.zip
+          echo "NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
+
+      - name: Build Android Dependencies
+        run: |
+          bash scripts/01_build_deps_android.sh
+
+      - name: Build FFmpeg Android
+        run: |
+          bash scripts/02_build_ffmpeg_android.sh
+
+      - name: Package Android
+        run: |
+          bash scripts/package.sh android
+
+      - name: Upload Android
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-android
+          path: release/android
+
+
+  ios:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: brew install yasm nasm pkg-config
+
+      - name: Build iOS Dependencies
+        run: |
+          bash scripts/03_build_deps_ios.sh
+
+      - name: Build FFmpeg iOS
+        run: |
+          bash scripts/04_build_ffmpeg_ios.sh
+
+      - name: Package iOS
+        run: |
+          bash scripts/package.sh ios
+
+      - name: Upload iOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-ios
+          path: release/ios
+
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/**/*
