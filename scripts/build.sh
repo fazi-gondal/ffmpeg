@@ -71,6 +71,7 @@ FFmpeg Build Info
 ABI: $ABI
 ARCH: $ARCH
 API: $ANDROID_API
+FFmpeg: $FFMPEG_VERSION
 Output: $OUTPUT_NAME
 Single shared library: $OUTPUT_SINGLE_SO
 LTO: $ENABLE_LTO

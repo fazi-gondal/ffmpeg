@@ -317,7 +317,7 @@ These features are present as future config switches but disabled by default:
 
 The build downloads and prepares these source packages:
 
-- FFmpeg 6.1.1
+- FFmpeg 8.1.2
 - Expat 2.6.2
 - FreeType 2.13.2
 - HarfBuzz 8.5.0
@@ -430,6 +430,7 @@ configs/
 Important defaults:
 
 ```bash
+FFMPEG_VERSION=8.1.2
 ANDROID_API=33
 TARGET_ARCH=aarch64
 TARGET_ABI=arm64-v8a

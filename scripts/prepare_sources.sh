@@ -9,16 +9,24 @@ log "PREPARING SOURCE DEPENDENCIES"
 SOURCES_DIR="$PROJECT_ROOT/ffmpeg_sources"
 mkdir -p "$SOURCES_DIR"
 
+FFMPEG_VERSION="${FFMPEG_VERSION:-8.1.2}"
+
 download_source() {
   local name="$1"
   local version="$2"
   local url="$3"
   local archive="$SOURCES_DIR/${name}-${version}.tar.${url##*.tar.}"
   local dest="$SOURCES_DIR/$name"
+  local version_file="$dest/.source-version"
 
-  if [ -d "$dest" ]; then
+  if [ -d "$dest" ] && [ -f "$version_file" ] && [ "$(cat "$version_file")" = "$version" ]; then
     echo "$name already exists: $dest"
     return
+  fi
+
+  if [ -d "$dest" ]; then
+    echo "Replacing $name source with version $version"
+    rm -rf "$dest"
   fi
 
   echo "Downloading $name $version"
@@ -26,6 +34,7 @@ download_source() {
 
   mkdir -p "$dest"
   tar -xf "$archive" -C "$dest" --strip-components=1
+  echo "$version" > "$version_file"
 }
 
 download_source "expat" "2.6.2" "https://github.com/libexpat/libexpat/releases/download/R_2_6_2/expat-2.6.2.tar.xz"
@@ -34,6 +43,6 @@ download_source "harfbuzz" "8.5.0" "https://github.com/harfbuzz/harfbuzz/release
 download_source "fribidi" "1.0.15" "https://github.com/fribidi/fribidi/releases/download/v1.0.15/fribidi-1.0.15.tar.xz"
 download_source "fontconfig" "2.15.0" "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.xz"
 download_source "libass" "0.17.1" "https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.xz"
-download_source "ffmpeg" "6.1.1" "https://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz"
+download_source "ffmpeg" "$FFMPEG_VERSION" "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"
 
 log "SOURCES READY"
