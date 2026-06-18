@@ -26,6 +26,7 @@ export PREFIX="$DEPS_PREFIX"
 # ==========================================
 
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+export PKG_CONFIG_SYSROOT_DIR=
 export PATH="$PREFIX/bin:$PATH"
 
 # ==========================================
@@ -61,7 +62,6 @@ cpu = '$CPU'
 endian = 'little'
 
 [properties]
-sys_root = '$SYSROOT'
 c_args = [$MESON_COMMON_ARGS]
 cpp_args = [$MESON_COMMON_ARGS]
 c_link_args = [$MESON_COMMON_ARGS]
