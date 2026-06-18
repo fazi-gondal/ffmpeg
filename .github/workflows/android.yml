@@ -11,6 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     env:
       ABI: arm64-v8a
       API_LEVEL: 33
@@ -67,23 +70,38 @@ jobs:
 
           bash scripts/build.sh
 
+      - name: Create release package
+        run: |
+
+          mkdir -p release
+          tar -czf release/ffmpeg-android-arm64-v8a.tar.gz -C output .
+          cp output/build-info.txt release/build-info.txt
+          cp output/libs/libffmpeg.so release/libffmpeg.so
+
       - name: Upload Artifact
 
         uses: actions/upload-artifact@v4
 
         with:
           name: ffmpeg-android-arm64-v8a
-          path: output/
+          path: |
+            output/
+            release/ffmpeg-android-arm64-v8a.tar.gz
 
       - name: Publish Release
-
-        if: startsWith(github.ref, 'refs/tags/')
 
         uses: softprops/action-gh-release@v2
 
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('FFmpeg Android {0}', github.ref_name) || 'Latest FFmpeg Android Build' }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          make_latest: ${{ startsWith(github.ref, 'refs/tags/') }}
           files: |
-            output/*
+            release/ffmpeg-android-arm64-v8a.tar.gz
+            release/libffmpeg.so
+            release/build-info.txt
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

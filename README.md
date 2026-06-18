@@ -1,237 +1,457 @@
-### 🎬 FFmpeg Android 13+ Build System (Expo Nitro Ready)
+# FFmpeg Android 13+ Builder for Expo / React Native
 
-This repository builds a **custom FFmpeg single shared library (`libffmpeg.so`)** for:
+This repository builds a custom FFmpeg Android package for Expo Nitro Modules, React Native native modules, and mobile video editor apps.
 
-- Android 13+ (API 33)
-- arm64-v8a only
-- React Native / Expo Nitro Modules
-- Social media video editor apps (CapCut-style)
+The default target is:
 
----
+- Android API 33+
+- ABI: `arm64-v8a`
+- Architecture: `aarch64`
+- Output: single shared library `libffmpeg.so`
+- Optional runtime tools: `ffmpeg` and `ffprobe`
+- CI: GitHub Actions with automatic artifact and GitHub Release upload
 
-### 🚀 Features
+## What Gets Built
 
-### 🎥 Video Core
+The build produces:
 
-- libavcodec (encoders/decoders)
-- libavformat (mux/demux)
-- libavfilter (filters engine)
-- libavutil (core utilities)
-- libswscale (video scaling)
-- libswresample (audio resampling)
+```text
+output/
+  libs/
+    libffmpeg.so
+  ffmpeg
+  ffprobe
+  build-info.txt
+```
 
----
+GitHub Actions also creates:
 
-### 🎞️ Video Codecs
+```text
+release/
+  ffmpeg-android-arm64-v8a.tar.gz
+  libffmpeg.so
+  build-info.txt
+```
 
-### Software codecs
+The release package contains the complete `output/` directory.
+
+## Core FFmpeg Libraries
+
+The final shared library is assembled from static FFmpeg libraries and selected subtitle/font dependencies:
+
+- `libavcodec`
+- `libavformat`
+- `libavfilter`
+- `libavutil`
+- `libswscale`
+- `libswresample`
+- `libass`
+- `fontconfig`
+- `freetype`
+- `harfbuzz`
+- `fribidi`
+- `expat`
+
+The final link step uses Android `clang`, permits FFmpeg internal duplicate helper symbols when flattening static archives into one `.so`, and hides archive symbols from the exported library surface.
+
+## Hardware Acceleration
+
+MediaCodec is enabled for Android hardware acceleration:
+
+### Hardware Decoders
+
+- `h264_mediacodec`
+- `hevc_mediacodec`
+- `vp8_mediacodec`
+- `vp9_mediacodec`
+
+### Hardware Encoders
+
+- `h264_mediacodec`
+- `hevc_mediacodec`
+
+VP8 and VP9 MediaCodec support is decode-only in the current build script.
+
+## Software Codecs
+
+The config enables FFmpeg native codec support for common editor formats:
+
+### Video Codecs
+
 - H.264
-- H.265
+- H.265 / HEVC
 - VP8
 - VP9
 - MPEG-4 Part 2
+- MJPEG
 
-### Hardware (Android MediaCodec)
-- h264_mediacodec
-- hevc_mediacodec
-- vp8_mediacodec
-- vp9_mediacodec
-
----
-
-### 🎵 Audio Codecs
+### Audio Codecs
 
 - AAC
 - MP3
 - FLAC
 - Opus
-- PCM/WAV
+- PCM / WAV
 
----
+### Optional External Codecs
 
-### 📦 Containers (Muxer/Demuxer)
+These are configured as optional and disabled by default:
+
+- x264: `CODEC_X264=no`, `ENABLE_X264=no`
+- x265: `CODEC_X265=no`, `ENABLE_X265=no`
+- AV1: `CODEC_AV1=no`, `ENABLE_AV1=no`
+- SVT-AV1: `CODEC_SVTAV1=no`, `ENABLE_SVTAV1=no`
+- rav1e: `CODEC_RAV1E=no`
+- Theora: `CODEC_THEORA=no`
+- Vorbis: `CODEC_VORBIS=no`
+- Speex: `CODEC_SPEEX=no`
+- ALAC: `CODEC_ALAC=no`
+- FDK-AAC: `CODEC_FDK_AAC=no`
+
+The build script only enables external codec libraries when their flags are set to `yes`. This prevents configure failures from missing optional libraries.
+
+## Containers
+
+### Muxers
+
+Enabled by config:
 
 - MP4
 - MOV
-- MKV
+- MKV / Matroska
 - WebM
 - MP3
 - M4A
 - WAV
 - FLAC
 
----
+The FFmpeg configure script currently enables:
 
-### 🎬 Video Filters
+- `mp4`
+- `matroska`
+- `mov`
+- `webm`
+- `mp3`
+- `wav`
+- `flac`
 
-- scale
-- crop
-- overlay
-- rotate
-- fade
-- zoompan
-- trim (setpts)
-- fps conversion
+### Demuxers
 
----
+Enabled by config:
 
-### 🔊 Audio Filters
+- MP4
+- MOV
+- MKV / Matroska
+- WebM
+- MP3
+- M4A
+- WAV
+- FLAC
 
-- volume
-- amix (audio mixing)
-- aresample
-- loudnorm
-- fade in/out
+The FFmpeg configure script currently enables:
 
----
+- `mp4`
+- `matroska`
+- `mov`
+- `webm`
+- `mp3`
+- `wav`
+- `flac`
 
-### 🎬 Subtitle System (CapCut-style)
+### Optional Containers Disabled by Default
 
-Powered by:
+- AVI
+- FLV
+- 3GP
+- MPEG-TS
+- OGG
+- MXF
+- DASH
+- HLS
+- Smooth Streaming
 
-- libass
-- FreeType
-- HarfBuzz
-- FriBidi
-- FontConfig
+## Protocols
 
-### Features
+Enabled protocols:
 
-- SRT / ASS / SSA / WebVTT
-- Burn subtitles into video
-- Font size control
-- Font color control
-- Outline / stroke
-- Shadow support
-- Positioning (x/y)
-- Multi-line subtitles
-- RTL support (Urdu, Arabic, Persian, Hebrew)
-- Unicode support
+- `file`
+- `http`
+- `https`
 
----
+## Filters
 
-### ⚡ Android Hardware Acceleration
+### Video Filters
 
-- MediaCodec H.264 encode/decode
-- MediaCodec H.265 encode/decode
-- VP8/VP9 hardware decode (device dependent)
-- Low CPU export mode
+Enabled or configured for the editor pipeline:
 
----
+- `scale`
+- `crop`
+- `overlay`
+- `rotate`
+- `fade`
+- `zoompan`
+- `subtitles`
+- flip support in config
+- fps conversion in config
+- setpts timeline support in config
+- framerate conversion in config
+- brightness/contrast support in config
+- hue/saturation support in config
+- gaussian blur support in config
 
-### 🧠 Architecture Overview
+### Audio Filters
 
+Configured for audio editing:
+
+- `volume`
+- `amix`
+- `aresample`
+- `loudnorm`
+- audio trim
+- audio fade
+- multi-track audio support
+
+### Text and Subtitle Filters
+
+- `subtitles`
+- ASS subtitle rendering through libass
+- styled subtitles
+- custom font rendering
+- drawbox support in config
+- drawtext support in config
+
+## Subtitle and Text Rendering Stack
+
+The build includes a full libass subtitle stack:
+
+- `libass`
+- `FreeType`
+- `HarfBuzz`
+- `FriBidi`
+- `FontConfig`
+- `Expat`
+
+Supported subtitle features:
+
+- SRT
+- ASS
+- SSA
+- WebVTT
+- burn-in subtitles
+- styled subtitles
+- font size control
+- font color control
+- font style control
+- outline / stroke
+- shadow
+- text background
+- x/y positioning
+- alignment
+- multi-line captions
+- timed subtitles
+- UTF-8 text
+- RTL scripts such as Urdu, Arabic, Persian, and Hebrew
+- LTR scripts
+- bidirectional text shaping
+- custom fonts
+- system fonts
+- font cache
+
+Default subtitle renderer:
+
+```text
+SUBTITLE_RENDER_MODE=libass
 ```
 
-GitHub Actions
-↓
-Configs (feature flags)
-↓
-Validate Config
-↓
-Build Dependencies
-(libass, freetype, harfbuzz, fribidi, fontconfig)
-↓
-Build FFmpeg
-↓
-Merge all libs
-↓
-libffmpeg.so
-↓
-Expo Nitro Module
+Default font:
 
+```text
+DEFAULT_FONT=Roboto
 ```
 
----
+## Multi-Stream Editing Features
 
-### 📁 Repository Structure
+Enabled by config:
 
+- multiple audio tracks
+- multiple video streams
+- multiple subtitle streams
+- metadata support
+- chapters support
+- faststart MP4 support
+- subtitle burn-in
+- frame accurate editing flag
+- timeline sync flag
+- sticker overlay flag
+- image overlay flag
+- speed control flag
+
+## Disabled Advanced Features
+
+These features are present as future config switches but disabled by default:
+
+- AV1 encoding
+- SVT-AV1
+- Vulkan
+- OpenCL
+- CUDA
+- VAAPI
+- Intel QSV
+- VideoToolbox
+- Dolby Vision
+- HDR10
+- HDR10+
+- xfade transitions
+- unsharp
+- chromakey
+- advanced keying
+- GL transform
+- Vulkan filters
+- subtitle animation
+- word-level karaoke timing
+- AI subtitle sync
+- translation subtitles
+- realtime subtitle editing
+
+## Source Dependencies
+
+The build downloads and prepares these source packages:
+
+- FFmpeg 6.1.1
+- Expat 2.6.2
+- FreeType 2.13.2
+- HarfBuzz 8.5.0
+- FriBidi 1.0.15
+- FontConfig 2.15.0
+- libass 0.17.1
+
+Sources are prepared under:
+
+```text
+ffmpeg_sources/
 ```
 
+Android dependency outputs are installed under:
+
+```text
+deps/android/arm64-v8a/
+```
+
+## GitHub Actions
+
+Workflow file:
+
+```text
 .github/workflows/android.yml
-
-configs/
-ffmpeg.conf
-codecs.conf
-containers.conf
-filters.conf
-subtitles.conf
-
-scripts/
-common.sh
-build.sh
-build_deps.sh
-build_ffmpeg.sh
-validate_config.sh
-
-output/
-
-````
-
----
-
-### 🏗️ Build Instructions
-
-### 1. Clone repo
-
-```bash
-git clone https://github.com/your-org/ffmpeg-android-builder
-cd ffmpeg-android-builder
-````
-
----
-
-### 2. Add Android NDK
-
-GitHub Actions handles it automatically, or locally:
-
-```bash
-export NDK=/path/to/android-ndk
 ```
 
----
+### Triggers
 
-### 3. Run build
+The workflow runs on:
 
-```bash
-bash scripts/build.sh
-```
+- manual dispatch from the GitHub Actions tab
+- pushed tags matching `v*`
 
----
+### Release Upload Behavior
 
-### 4. Output
-
-```
-output/libs/libffmpeg.so
-output/ffmpeg
-output/ffprobe
-```
-
----
-
-### 🚀 GitHub Actions Build
-
-### Trigger build:
+Tag builds publish a normal GitHub Release for the tag:
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-### Output:
+Manual builds publish or update a prerelease named:
 
-* GitHub Release
-* Artifact:
+```text
+latest
+```
 
-  ```
-  ffmpeg-android-arm64-v8a.tar.gz
-  ```
+Release assets:
 
----
+- `ffmpeg-android-arm64-v8a.tar.gz`
+- `libffmpeg.so`
+- `build-info.txt`
 
-### 📱 Expo Nitro Integration
+The workflow requires:
 
-Use this `.so` inside your native module:
+```yaml
+permissions:
+  contents: write
+```
+
+This is already configured so `softprops/action-gh-release` can create or update releases.
+
+## Local Build
+
+Install Android NDK r26d or compatible, then set:
+
+```bash
+export NDK=/path/to/android-ndk-r26d
+```
+
+Run:
+
+```bash
+bash scripts/build.sh
+```
+
+Validation only:
+
+```bash
+bash scripts/validate_config.sh
+```
+
+Build dependencies only:
+
+```bash
+bash scripts/build_deps.sh
+```
+
+Build FFmpeg only:
+
+```bash
+bash scripts/build_ffmpeg.sh
+```
+
+## Configuration Files
+
+Feature flags live in:
+
+```text
+configs/
+  ffmpeg.conf
+  codecs.conf
+  containers.conf
+  filters.conf
+  subtitles.conf
+```
+
+Important defaults:
+
+```bash
+ANDROID_API=33
+TARGET_ARCH=aarch64
+TARGET_ABI=arm64-v8a
+ENABLE_MEDIACODEC=yes
+ENABLE_LIBASS=yes
+ENABLE_FREETYPE=yes
+ENABLE_HARFBUZZ=yes
+ENABLE_FRIBIDI=yes
+ENABLE_FONTCONFIG=yes
+BUILD_FFMPEG=yes
+BUILD_FFPROBE=yes
+OUTPUT_SINGLE_SO=yes
+OUTPUT_NAME=libffmpeg.so
+ENABLE_LTO=yes
+STRIP_BINARIES=yes
+```
+
+## Expo / React Native Integration
+
+Use `output/libs/libffmpeg.so` in your Android native module or Expo Nitro module.
+
+Example TypeScript surface:
 
 ```ts
 import { NativeModule } from 'react-native';
@@ -241,107 +461,54 @@ export class FFmpegModule extends NativeModule {
 }
 ```
 
----
+Typical app workflows:
 
-### 🎬 Example Use Cases
+- video trim
+- crop / resize / rotate
+- overlay images or video
+- burn subtitles into video
+- render styled ASS captions
+- process multi-audio exports
+- mix audio tracks
+- normalize volume
+- generate social media MP4/WebM outputs
 
-### Trim video
+## Example Commands
+
+Trim video:
 
 ```bash
 ffmpeg -i input.mp4 -ss 00:00:05 -t 10 output.mp4
 ```
 
----
-
-### Burn subtitles
+Burn subtitles:
 
 ```bash
-ffmpeg -i input.mp4 -vf subtitles=sub.srt output.mp4
+ffmpeg -i input.mp4 -vf subtitles=subtitles.srt output.mp4
 ```
 
----
-
-### Multi audio track export
+Overlay an image:
 
 ```bash
-ffmpeg -i video.mp4 -i audio2.aac -map 0 -map 1 output.mp4
+ffmpeg -i video.mp4 -i sticker.png -filter_complex overlay=20:20 output.mp4
 ```
 
----
-
-### ⚙️ Configuration System
-
-You can enable/disable features in:
-
-```
-configs/*.conf
-```
-
-Example:
+Mix audio tracks:
 
 ```bash
-CODEC_X264=no
-ENABLE_LIBASS=yes
-ENABLE_MEDIACODEC=yes
+ffmpeg -i video.mp4 -i music.aac -filter_complex amix=inputs=2 output.mp4
 ```
 
----
+Export WebM:
 
-### 🧠 Design Philosophy
-
-This system is designed for:
-
-* High-performance mobile video editing
-* Minimal runtime dependencies
-* Single `.so` deployment
-* Expo + React Native compatibility
-* CapCut-style editing features
-
----
-
-### ⚠️ Important Notes
-
-* Android 13+ only
-* arm64-v8a only
-* MediaCodec preferred for encoding
-* x264/x265 optional (disabled by default)
-* libass required for advanced subtitles
-
----
-
-### 🚀 Future Upgrades
-
-* AV1 encoding (SVT-AV1)
-* GPU filters (Vulkan/OpenCL)
-* AI subtitle generation
-* Real-time preview engine
-* Timeline-based rendering API
-
----
-
-### 🎯 Final Output
-
-```
-libffmpeg.so
+```bash
+ffmpeg -i input.mp4 output.webm
 ```
 
-A **single unified multimedia engine** for:
+## Notes
 
-* Video editing
-* Audio processing
-* Subtitle rendering
-* Social media export pipelines
-
----
-
-### 🧠 Summary
-
-This is not just FFmpeg.
-
-This is:
-
-> 🎬 A custom video editing engine for React Native / Expo Nitro
-
-built on top of FFmpeg + MediaCodec + libass stack.
-
----
+- The default build is optimized for Android 13+ and `arm64-v8a`.
+- MediaCodec support depends on the runtime Android device.
+- x264, x265, libvpx, libopus, and libmp3lame are not built unless explicitly enabled and added to the dependency build.
+- The output is intentionally packaged as one shared library for easier mobile integration.
+- The CI build also uploads a normal Actions artifact, so release assets and workflow artifacts are both available.

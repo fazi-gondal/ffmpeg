@@ -71,29 +71,91 @@ FFmpeg Build Info
 ABI: $ABI
 ARCH: $ARCH
 API: $ANDROID_API
+Output: $OUTPUT_NAME
+Single shared library: $OUTPUT_SINGLE_SO
+LTO: $ENABLE_LTO
+Stripped: $STRIP_BINARIES
 
-Video Codecs:
-- H.264 (MediaCodec)
-- H.265 (MediaCodec)
-- VP8 / VP9
+Core Libraries:
+- libavcodec
+- libavformat
+- libavfilter
+- libavutil
+- libswscale
+- libswresample
 
-Audio Codecs:
-- AAC, MP3, FLAC, Opus
+Hardware Decoders:
+- h264_mediacodec
+- hevc_mediacodec
+- vp8_mediacodec
+- vp9_mediacodec
 
-Subtitles:
-- libass enabled
-- FreeType + HarfBuzz + FriBidi
-- RTL support (Urdu/Arabic)
+Hardware Encoders:
+- h264_mediacodec
+- hevc_mediacodec
+
+Software Video Codecs:
+- H.264
+- H.265 / HEVC
+- VP8
+- VP9
+- MPEG-4 Part 2
+- MJPEG
+
+Software Audio Codecs:
+- AAC
+- MP3
+- FLAC
+- Opus
+- PCM / WAV
+
+Muxers:
+- MP4
+- MOV
+- MKV / Matroska
+- WebM
+- MP3
+- WAV
+- FLAC
+
+Demuxers:
+- MP4
+- MOV
+- MKV / Matroska
+- WebM
+- MP3
+- WAV
+- FLAC
+
+Protocols:
+- file
+- http
+- https
 
 Filters:
-- scale, crop, overlay, trim
-- audio mixing, volume control
+- scale
+- crop
+- overlay
+- rotate
+- fade
+- zoompan
+- subtitles
 
-Output:
-- single libffmpeg.so
+Subtitles:
+- libass
+- FreeType
+- HarfBuzz
+- FriBidi
+- FontConfig
+- Expat
+- SRT / ASS / SSA / WebVTT
+- UTF-8
+- RTL and bidirectional text support
 
-Build Mode:
-- Android 13+ optimized
+Runtime Tools:
+- ffmpeg: $BUILD_FFMPEG
+- ffprobe: $BUILD_FFPROBE
+- ffplay: $BUILD_FFPLAY
 EOF
 
 # ==========================================
