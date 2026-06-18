@@ -23,9 +23,6 @@ mkdir -p "$BUILD_DIR"
 
 bash scripts/prepare_sources.sh
 
-export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
-export PATH="$DEPS_PREFIX/bin:$PATH"
-
 cd "$FFMPEG_SRC"
 
 # ==========================================
@@ -33,6 +30,13 @@ cd "$FFMPEG_SRC"
 # ==========================================
 
 make distclean || true
+
+# ==========================================
+# EXPORT PATHS & PKG_CONFIG
+# ==========================================
+
+export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+export PATH="$DEPS_PREFIX/bin:$PATH"
 
 # ==========================================
 # BASE CONFIGURE FLAGS
@@ -44,7 +48,13 @@ CONFIGURE_FLAGS="\
 --arch=$ARCH \
 --cpu=$CPU \
 --enable-cross-compile \
---cross-prefix=$TOOLCHAIN/bin/aarch64-linux-android- \
+--cc=$CC \
+--cxx=$CXX \
+--ar=$AR \
+--as=$CC \
+--strip=$STRIP \
+--ranlib=$RANLIB \
+--nm=$NM \
 --sysroot=$SYSROOT \
 --disable-shared \
 --enable-static \
@@ -68,7 +78,7 @@ fi
 CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ffplay"
 
 # ==========================================
-# VIDEO CODECS
+# VIDEO CODECS (MediaCodec)
 # ==========================================
 
 if [ "$ENABLE_MEDIACODEC" = "yes" ]; then
@@ -95,27 +105,53 @@ fi
 # SOFTWARE CODECS
 # ==========================================
 
-CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-version3"
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
+--enable-gpl \
+--enable-version3"
 
-if [ "$CODEC_X264" = "yes" ]; then
+if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
   CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx264"
 fi
 
-if [ "$CODEC_X265" = "yes" ]; then
+if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
   CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx265"
+fi
+
+if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libvpx"
+fi
+
+if [ "$ENABLE_LIBOPUS" = "yes" ] || [ "$CODEC_LIBOPUS" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libopus"
+fi
+
+if [ "$ENABLE_LIBMP3LAME" = "yes" ] || [ "$CODEC_LIBMP3LAME" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame"
 fi
 
 # ==========================================
 # SUBTITLES STACK
 # ==========================================
 
-CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
---enable-libass \
---enable-libfreetype \
---enable-libharfbuzz \
---enable-libfribidi \
---enable-libfontconfig \
-"
+if [ "$ENABLE_LIBASS" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libass"
+fi
+
+if [ "$ENABLE_FREETYPE" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfreetype"
+fi
+
+if [ "$ENABLE_HARFBUZZ" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libharfbuzz"
+fi
+
+if [ "$ENABLE_FRIBIDI" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfribidi"
+fi
+
+if [ "$ENABLE_FONTCONFIG" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfontconfig"
+fi
 
 # ==========================================
 # FILTERS
@@ -207,6 +243,7 @@ make install
 
 check_error "FFmpeg install"
 
+# ==========================================
 # CREATE SINGLE LIB (OPTIONAL MERGE STEP)
 # ==========================================
 

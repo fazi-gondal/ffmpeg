@@ -34,7 +34,10 @@ jobs:
           autoconf \
           automake \
           cmake \
+          gettext \
+          gperf \
           libtool \
+          xz-utils \
           yasm \
           nasm \
           meson \

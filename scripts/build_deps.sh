@@ -10,6 +10,8 @@ source scripts/common.sh
 
 log "BUILDING DEPENDENCIES (libass stack)"
 
+bash scripts/prepare_sources.sh
+
 # ==========================================
 # INSTALL PREFIX
 # ==========================================
@@ -20,52 +22,11 @@ mkdir -p "$DEPS_PREFIX"
 export PREFIX="$DEPS_PREFIX"
 
 # ==========================================
-# PATHS & COMPILER FLAGS
+# PATHS
 # ==========================================
 
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 export PATH="$PREFIX/bin:$PATH"
-
-export CFLAGS="$CFLAGS -I$PREFIX/include"
-export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
-export LDFLAGS="$LDFLAGS -L$PREFIX/lib"
-
-# ==========================================
-# DOWNLOAD & EXTRACT HELPERS
-# ==========================================
-
-SOURCES_DIR="$PROJECT_ROOT/ffmpeg_sources"
-mkdir -p "$SOURCES_DIR"
-
-download_and_extract() {
-  local url="$1"
-  local archive_name="$2"
-  local folder_name="$3"
-  local target_name="$4"
-  
-  if [ ! -d "$SOURCES_DIR/$target_name" ]; then
-    log "Downloading $url..."
-    wget -q --show-progress -O "$SOURCES_DIR/$archive_name" "$url"
-    
-    log "Extracting $archive_name..."
-    tar -xf "$SOURCES_DIR/$archive_name" -C "$SOURCES_DIR"
-    
-    mv "$SOURCES_DIR/$folder_name" "$SOURCES_DIR/$target_name"
-    rm -f "$SOURCES_DIR/$archive_name"
-    log "Successfully prepared $target_name"
-  else
-    log "$target_name already prepared"
-  fi
-}
-
-# Download all sources
-download_and_extract "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz" "expat-2.5.0.tar.gz" "expat-2.5.0" "expat"
-download_and_extract "https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz" "freetype-2.13.2.tar.gz" "freetype-2.13.2" "freetype"
-download_and_extract "https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz" "harfbuzz-8.3.0.tar.xz" "harfbuzz-8.3.0" "harfbuzz"
-download_and_extract "https://github.com/fribidi/fribidi/releases/download/v1.0.13/fribidi-1.0.13.tar.xz" "fribidi-1.0.13.tar.xz" "fribidi-1.0.13" "fribidi"
-download_and_extract "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz" "fontconfig-2.14.2.tar.gz" "fontconfig-2.14.2" "fontconfig"
-download_and_extract "https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.xz" "libass-0.17.1.tar.xz" "libass-0.17.1" "libass"
-download_and_extract "https://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz" "ffmpeg-6.1.1.tar.xz" "ffmpeg-6.1.1" "ffmpeg"
 
 # ==========================================
 # GENERIC CONFIGURE FLAGS
@@ -77,13 +38,43 @@ CONFIGURE_FLAGS="\
 --enable-static \
 --disable-shared"
 
+MESON_CROSS_FILE="$PROJECT_ROOT/build/meson-$ABI.ini"
+mkdir -p "$(dirname "$MESON_CROSS_FILE")"
+
+MESON_COMMON_ARGS="'--target=${HOST}${TARGET_API}', '--sysroot=${SYSROOT}'"
+if [ "$ENABLE_LTO" = "yes" ]; then
+  MESON_COMMON_ARGS="$MESON_COMMON_ARGS, '-flto'"
+fi
+
+cat > "$MESON_CROSS_FILE" <<EOF
+[binaries]
+c = '$CC'
+cpp = '$CXX'
+ar = '$AR'
+strip = '$STRIP'
+pkg-config = 'pkg-config'
+
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = '$CPU'
+endian = 'little'
+
+[properties]
+sys_root = '$SYSROOT'
+c_args = [$MESON_COMMON_ARGS]
+cpp_args = [$MESON_COMMON_ARGS]
+c_link_args = [$MESON_COMMON_ARGS]
+cpp_link_args = [$MESON_COMMON_ARGS]
+EOF
+
 # ==========================================
-# 0. EXPAT (required by FontConfig)
+# 0. EXPAT (FontConfig dependency)
 # ==========================================
 
 log "Building Expat"
 
-cd "$SOURCES_DIR/expat"
+cd "$PROJECT_ROOT/ffmpeg_sources/expat"
 
 ./configure $CONFIGURE_FLAGS
 
@@ -98,11 +89,13 @@ check_error "Expat build"
 
 log "Building FreeType"
 
-cd "$SOURCES_DIR/freetype"
+cd "$PROJECT_ROOT/ffmpeg_sources/freetype"
 
 ./configure $CONFIGURE_FLAGS \
   --without-png \
-  --without-harfbuzz
+  --without-harfbuzz \
+  --without-bzip2 \
+  --without-brotli
 
 make -j$(nproc)
 make install
@@ -115,37 +108,21 @@ check_error "FreeType build"
 
 log "Building HarfBuzz"
 
-cd "$SOURCES_DIR/harfbuzz"
-
-# Generate meson cross file dynamically
-cat > meson-cross.txt <<EOF
-[binaries]
-c = '$(echo $CC | cut -d' ' -f1)'
-cpp = '$(echo $CXX | cut -d' ' -f1)'
-ar = '$AR'
-strip = '$STRIP'
-pkgconfig = 'pkg-config'
-
-[built-in options]
-c_args = [$(echo $CFLAGS | sed "s/ /', '/g" | sed "s/^/'/" | sed "s/$/'/")]
-cpp_args = [$(echo $CXXFLAGS | sed "s/ /', '/g" | sed "s/^/'/" | sed "s/$/'/")]
-c_link_args = [$(echo $LDFLAGS | sed "s/ /', '/g" | sed "s/^/'/" | sed "s/$/'/")]
-cpp_link_args = [$(echo $LDFLAGS | sed "s/ /', '/g" | sed "s/^/'/" | sed "s/$/'/")]
-
-[host_machine]
-system = 'android'
-cpu_family = 'aarch64'
-cpu = 'armv8-a'
-endian = 'little'
-EOF
+cd "$PROJECT_ROOT/ffmpeg_sources/harfbuzz"
 
 rm -rf build
 meson setup build \
-  --cross-file meson-cross.txt \
-  --prefix=$PREFIX \
+  --cross-file "$MESON_CROSS_FILE" \
+  --prefix="$PREFIX" \
   --buildtype=release \
+  --default-library=static \
+  -Dglib=disabled \
+  -Dgobject=disabled \
+  -Dintrospection=disabled \
+  -Ddocs=disabled \
   -Dtests=disabled \
-  -Dbenchmark=disabled
+  -Dbenchmark=disabled \
+  -Dfreetype=enabled
 
 ninja -C build
 ninja -C build install
@@ -158,12 +135,19 @@ check_error "HarfBuzz build"
 
 log "Building FriBidi"
 
-cd "$SOURCES_DIR/fribidi"
+cd "$PROJECT_ROOT/ffmpeg_sources/fribidi"
 
-./configure $CONFIGURE_FLAGS
+rm -rf build
+meson setup build \
+  --cross-file "$MESON_CROSS_FILE" \
+  --prefix="$PREFIX" \
+  --buildtype=release \
+  --default-library=static \
+  -Ddocs=false \
+  -Dtests=false
 
-make -j$(nproc)
-make install
+ninja -C build
+ninja -C build install
 
 check_error "FriBidi build"
 
@@ -173,9 +157,11 @@ check_error "FriBidi build"
 
 log "Building FontConfig"
 
-cd "$SOURCES_DIR/fontconfig"
+cd "$PROJECT_ROOT/ffmpeg_sources/fontconfig"
 
 ./configure $CONFIGURE_FLAGS \
+  --with-expat="$PREFIX" \
+  --with-add-fonts=/system/fonts \
   --disable-docs \
   --disable-tests \
   --without-uuid
@@ -191,11 +177,12 @@ check_error "FontConfig build"
 
 log "Building libass"
 
-cd "$SOURCES_DIR/libass"
+cd "$PROJECT_ROOT/ffmpeg_sources/libass"
 
 ./configure $CONFIGURE_FLAGS \
   --enable-harfbuzz \
-  --enable-fontconfig
+  --enable-fontconfig \
+  --disable-require-system-font-provider
 
 make -j$(nproc)
 make install
