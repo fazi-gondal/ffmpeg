@@ -190,6 +190,38 @@ make install
 check_error "libass build"
 
 # ==========================================
+# 6. X264 (H.264 software encoder)
+# ==========================================
+
+if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
+  log "Building x264"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/x264"
+
+  make distclean || true
+
+  CC="$CC" \
+  AR="$AR" \
+  RANLIB="$RANLIB" \
+  STRIP="$STRIP" \
+  ./configure \
+    --host="$ARCH-linux" \
+    --prefix="$PREFIX" \
+    --sysroot="$SYSROOT" \
+    --enable-static \
+    --enable-pic \
+    --disable-cli \
+    --disable-opencl \
+    --extra-cflags="$CFLAGS" \
+    --extra-ldflags="$LDFLAGS"
+
+  make -j$(nproc)
+  make install
+
+  check_error "x264 build"
+fi
+
+# ==========================================
 # DONE
 # ==========================================
 

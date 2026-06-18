@@ -43,6 +43,7 @@ download_source "harfbuzz" "8.5.0" "https://github.com/harfbuzz/harfbuzz/release
 download_source "fribidi" "1.0.15" "https://github.com/fribidi/fribidi/releases/download/v1.0.15/fribidi-1.0.15.tar.xz"
 download_source "fontconfig" "2.15.0" "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.15.0.tar.xz"
 download_source "libass" "0.17.1" "https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.xz"
+download_source "x264" "stable" "https://code.videolan.org/videolan/x264/-/archive/stable/x264-stable.tar.gz"
 download_source "ffmpeg" "$FFMPEG_VERSION" "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"
 
 log "SOURCES READY"

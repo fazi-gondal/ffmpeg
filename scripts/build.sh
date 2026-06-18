@@ -97,6 +97,7 @@ Hardware Encoders:
 
 Software Video Codecs:
 - H.264
+- H.264 software encoder via libx264
 - H.265 / HEVC
 - VP8
 - VP9

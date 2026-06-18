@@ -82,6 +82,39 @@ jobs:
           tar -czf release/ffmpeg-android-arm64-v8a.tar.gz -C output .
           cp output/build-info.txt release/build-info.txt
           cp output/libs/libffmpeg.so release/libffmpeg.so
+          cat > release/release-notes.md <<EOF
+          # FFmpeg Android Build
+
+          This release contains the latest Android arm64-v8a FFmpeg build.
+
+          ## Highlights
+
+          - FFmpeg 8.1.2
+          - Node.js 24 GitHub Actions runtime
+          - Android API 33+
+          - Single shared library output: libffmpeg.so
+          - libx264 enabled for H.264 software encoding
+          - MediaCodec enabled for H.264 and HEVC hardware encoding
+          - MediaCodec enabled for H.264, HEVC, VP8, and VP9 hardware decoding
+          - libass subtitle rendering with FreeType, HarfBuzz, FriBidi, FontConfig, and Expat
+
+          ## Assets
+
+          - ffmpeg-android-arm64-v8a.tar.gz: complete output package
+          - libffmpeg.so: direct shared library download
+          - build-info.txt: build feature summary
+
+          Note: x264 is GPL-licensed, so this is a GPL FFmpeg build.
+          EOF
+
+      - name: Update latest source tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f latest "$GITHUB_SHA"
+          git push origin refs/tags/latest --force
 
       - name: Upload Artifact
 
@@ -101,8 +134,9 @@ jobs:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
           name: ${{ startsWith(github.ref, 'refs/tags/') && format('FFmpeg Android {0}', github.ref_name) || 'Latest FFmpeg Android Build' }}
           target_commitish: ${{ github.sha }}
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          make_latest: ${{ startsWith(github.ref, 'refs/tags/') }}
+          body_path: release/release-notes.md
+          prerelease: false
+          make_latest: true
           files: |
             release/ffmpeg-android-arm64-v8a.tar.gz
             release/libffmpeg.so

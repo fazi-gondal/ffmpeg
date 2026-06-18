@@ -23,6 +23,9 @@ mkdir -p "$BUILD_DIR"
 
 bash scripts/prepare_sources.sh
 
+export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+export PATH="$DEPS_PREFIX/bin:$PATH"
+
 cd "$FFMPEG_SRC"
 
 # ==========================================
@@ -30,13 +33,6 @@ cd "$FFMPEG_SRC"
 # ==========================================
 
 make distclean || true
-
-# ==========================================
-# EXPORT PATHS & PKG_CONFIG
-# ==========================================
-
-export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
-export PATH="$DEPS_PREFIX/bin:$PATH"
 
 # ==========================================
 # BASE CONFIGURE FLAGS
@@ -78,7 +74,7 @@ fi
 CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ffplay"
 
 # ==========================================
-# VIDEO CODECS (MediaCodec)
+# VIDEO CODECS
 # ==========================================
 
 if [ "$ENABLE_MEDIACODEC" = "yes" ]; then
@@ -105,9 +101,7 @@ fi
 # SOFTWARE CODECS
 # ==========================================
 
-CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
---enable-gpl \
---enable-version3"
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-version3"
 
 if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
   CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx264"
@@ -257,6 +251,12 @@ $DEPS_PREFIX/lib/libharfbuzz.a
 $DEPS_PREFIX/lib/libfribidi.a
 $DEPS_PREFIX/lib/libexpat.a
 "
+
+if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
+  DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
+$DEPS_PREFIX/lib/libx264.a
+"
+fi
 
 $CC -shared \
   -o "$BUILD_DIR/libffmpeg.so" \
