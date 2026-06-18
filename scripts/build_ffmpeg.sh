@@ -260,6 +260,8 @@ $DEPS_PREFIX/lib/libexpat.a
 
 $CC -shared \
   -o "$BUILD_DIR/libffmpeg.so" \
+  -Wl,--allow-multiple-definition \
+  -Wl,--exclude-libs,ALL \
   -Wl,--whole-archive \
   "$BUILD_DIR/lib/"*.a \
   -Wl,--no-whole-archive \
