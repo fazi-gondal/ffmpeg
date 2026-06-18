@@ -21,6 +21,11 @@ DEPS_PREFIX="$PROJECT_ROOT/deps/android/$ABI"
 
 mkdir -p "$BUILD_DIR"
 
+bash scripts/prepare_sources.sh
+
+export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+export PATH="$DEPS_PREFIX/bin:$PATH"
+
 cd "$FFMPEG_SRC"
 
 # ==========================================
@@ -41,46 +46,64 @@ CONFIGURE_FLAGS="\
 --enable-cross-compile \
 --cross-prefix=$TOOLCHAIN/bin/aarch64-linux-android- \
 --sysroot=$SYSROOT \
---enable-shared \
---disable-static \
+--disable-shared \
+--enable-static \
 --enable-pic \
 --disable-doc \
---disable-programs \
+--pkg-config-flags=--static \
 "
+
+if [ "$BUILD_FFMPEG" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-ffmpeg"
+else
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ffmpeg"
+fi
+
+if [ "$BUILD_FFPROBE" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-ffprobe"
+else
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ffprobe"
+fi
+
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ffplay"
 
 # ==========================================
 # VIDEO CODECS
 # ==========================================
 
+if [ "$ENABLE_MEDIACODEC" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-jni --enable-mediacodec"
+fi
+
 if [ "$MEDIACODEC_H264" = "yes" ]; then
-  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-h264_mediacodec"
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-decoder=h264_mediacodec --enable-encoder=h264_mediacodec"
 fi
 
 if [ "$MEDIACODEC_HEVC" = "yes" ]; then
-  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-hevc_mediacodec"
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-decoder=hevc_mediacodec --enable-encoder=hevc_mediacodec"
 fi
 
 if [ "$MEDIACODEC_VP8" = "yes" ]; then
-  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-vp8_mediacodec"
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-decoder=vp8_mediacodec"
 fi
 
 if [ "$MEDIACODEC_VP9" = "yes" ]; then
-  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-vp9_mediacodec"
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-decoder=vp9_mediacodec"
 fi
 
 # ==========================================
 # SOFTWARE CODECS
 # ==========================================
 
-CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
---enable-gpl \
---enable-version3 \
---enable-libx264 \
---enable-libx265 \
---enable-libvpx \
---enable-libopus \
---enable-libmp3lame \
-"
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-version3"
+
+if [ "$CODEC_X264" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx264"
+fi
+
+if [ "$CODEC_X265" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx265"
+fi
 
 # ==========================================
 # SUBTITLES STACK
@@ -114,14 +137,14 @@ CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 
 CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 --enable-muxer=mp4 \
---enable-muxer=mkv \
+--enable-muxer=matroska \
 --enable-muxer=mov \
 --enable-muxer=webm \
 --enable-muxer=mp3 \
 --enable-muxer=wav \
 --enable-muxer=flac \
 --enable-demuxer=mp4 \
---enable-demuxer=mkv \
+--enable-demuxer=matroska \
 --enable-demuxer=mov \
 --enable-demuxer=webm \
 --enable-demuxer=mp3 \
@@ -151,8 +174,9 @@ CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 # ==========================================
 
 CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
---extra-cflags=\"-I$DEPS_PREFIX/include\" \
---extra-ldflags=\"-L$DEPS_PREFIX/lib\" \
+--extra-cflags=-I$DEPS_PREFIX/include \
+--extra-ldflags=-L$DEPS_PREFIX/lib \
+--extra-libs=-llog \
 "
 
 # ==========================================
@@ -183,20 +207,6 @@ make install
 
 check_error "FFmpeg install"
 
-# ==========================================
-# COPY OUTPUT
-# ==========================================
-
-mkdir -p "$BUILD_DIR/output"
-
-cp "$BUILD_DIR/lib/libavcodec.so" "$BUILD_DIR/output/"
-cp "$BUILD_DIR/lib/libavformat.so" "$BUILD_DIR/output/"
-cp "$BUILD_DIR/lib/libavfilter.so" "$BUILD_DIR/output/"
-cp "$BUILD_DIR/lib/libavutil.so" "$BUILD_DIR/output/"
-cp "$BUILD_DIR/lib/libswscale.so" "$BUILD_DIR/output/"
-cp "$BUILD_DIR/lib/libswresample.so" "$BUILD_DIR/output/"
-
-# ==========================================
 # CREATE SINGLE LIB (OPTIONAL MERGE STEP)
 # ==========================================
 
@@ -205,7 +215,8 @@ log "Creating final libffmpeg.so"
 $CC -shared \
   -o "$BUILD_DIR/libffmpeg.so" \
   -Wl,--whole-archive \
-  "$BUILD_DIR/output/"*.so \
+  "$BUILD_DIR/lib/"*.a \
+  "$DEPS_PREFIX/lib/"*.a \
   -Wl,--no-whole-archive \
   -llog -lm -lz
 

@@ -10,6 +10,8 @@ source scripts/common.sh
 
 log "STARTING FFmpeg FULL BUILD PIPELINE"
 
+bash scripts/validate_config.sh
+
 # ==========================================
 # CLEAN PREVIOUS OUTPUT
 # ==========================================
@@ -49,13 +51,13 @@ mkdir -p "$OUTPUT_DIR/libs"
 cp "$FFMPEG_BUILD_DIR/libffmpeg.so" "$OUTPUT_DIR/libs/"
 check_error "Copy libffmpeg.so"
 
-# Copy tools if enabled
-if [ "$BUILD_FFPROBE" = "yes" ]; then
-  cp "$FFMPEG_BUILD_DIR/ffprobe" "$OUTPUT_DIR/"
+# Copy tools if enabled and produced by FFmpeg
+if [ "$BUILD_FFPROBE" = "yes" ] && [ -f "$FFMPEG_BUILD_DIR/bin/ffprobe" ]; then
+  cp "$FFMPEG_BUILD_DIR/bin/ffprobe" "$OUTPUT_DIR/"
 fi
 
-if [ "$BUILD_FFMPEG" = "yes" ]; then
-  cp "$FFMPEG_BUILD_DIR/ffmpeg" "$OUTPUT_DIR/"
+if [ "$BUILD_FFMPEG" = "yes" ] && [ -f "$FFMPEG_BUILD_DIR/bin/ffmpeg" ]; then
+  cp "$FFMPEG_BUILD_DIR/bin/ffmpeg" "$OUTPUT_DIR/"
 fi
 
 # ==========================================

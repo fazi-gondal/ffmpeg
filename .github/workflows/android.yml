@@ -59,18 +59,7 @@ jobs:
 
           bash scripts/validate_config.sh
 
-      - name: Build dependencies
-        run: |
-
-          bash scripts/build_deps.sh
-
-      - name: Build FFmpeg
-        run: |
-
-          bash scripts/build_ffmpeg.sh
-
-      - name: Package
-
+      - name: Build and package FFmpeg
         run: |
 
           bash scripts/build.sh
