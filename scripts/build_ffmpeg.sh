@@ -249,12 +249,23 @@ check_error "FFmpeg install"
 
 log "Creating final libffmpeg.so"
 
+DEPS_STATIC_LIBS="
+$DEPS_PREFIX/lib/libass.a
+$DEPS_PREFIX/lib/libfontconfig.a
+$DEPS_PREFIX/lib/libfreetype.a
+$DEPS_PREFIX/lib/libharfbuzz.a
+$DEPS_PREFIX/lib/libfribidi.a
+$DEPS_PREFIX/lib/libexpat.a
+"
+
 $CC -shared \
   -o "$BUILD_DIR/libffmpeg.so" \
   -Wl,--whole-archive \
   "$BUILD_DIR/lib/"*.a \
-  "$DEPS_PREFIX/lib/"*.a \
   -Wl,--no-whole-archive \
+  -Wl,--start-group \
+  $DEPS_STATIC_LIBS \
+  -Wl,--end-group \
   -llog -lm -lz
 
 # ==========================================
