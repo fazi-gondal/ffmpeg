@@ -294,7 +294,6 @@ if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
   ./configure \
     --target=arm64-android-gcc \
     --prefix="$PREFIX" \
-    --sdk-path="$NDK" \
     --enable-vp8 \
     --enable-vp9 \
     --enable-pic \
