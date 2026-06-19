@@ -194,6 +194,7 @@ CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 --enable-avfilter \
 --enable-avformat \
 --enable-avcodec \
+--enable-avdevice \
 --enable-avutil \
 --enable-swscale \
 --enable-swresample \
@@ -258,7 +259,19 @@ $DEPS_PREFIX/lib/libx264.a
 "
 fi
 
-$CC -shared \
+if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
+  DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
+$DEPS_PREFIX/lib/libx265.a
+"
+fi
+
+if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
+  DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
+$DEPS_PREFIX/lib/libvpx.a
+"
+fi
+
+$CXX -shared \
   -o "$BUILD_DIR/libffmpeg.so" \
   -Wl,--allow-multiple-definition \
   -Wl,--exclude-libs,ALL \

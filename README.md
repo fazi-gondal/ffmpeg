@@ -42,6 +42,7 @@ The final shared library is assembled from static FFmpeg libraries and selected 
 - `libavcodec`
 - `libavformat`
 - `libavfilter`
+- `libavdevice`
 - `libavutil`
 - `libswscale`
 - `libswresample`
@@ -98,10 +99,11 @@ The config enables FFmpeg native codec support for common editor formats:
 Enabled by default:
 
 - x264 H.264 encoder: `CODEC_X264=yes`, `ENABLE_X264=yes`
+- x265 H.265 / HEVC encoder: `CODEC_X265=yes`, `ENABLE_X265=yes`
+- libvpx VP8 / VP9 encoder and decoder: `CODEC_LIBVPX=yes`, `ENABLE_LIBVPX=yes`
 
 Configured as optional and disabled by default:
 
-- x265: `CODEC_X265=no`, `ENABLE_X265=no`
 - AV1: `CODEC_AV1=no`, `ENABLE_AV1=no`
 - SVT-AV1: `CODEC_SVTAV1=no`, `ENABLE_SVTAV1=no`
 - rav1e: `CODEC_RAV1E=no`
@@ -111,9 +113,9 @@ Configured as optional and disabled by default:
 - ALAC: `CODEC_ALAC=no`
 - FDK-AAC: `CODEC_FDK_AAC=no`
 
-The build script only enables external codec libraries when their flags are set to `yes`. x264 is built as an Android static dependency before FFmpeg configure runs, so `--enable-libx264` has a matching `x264.pc` and `libx264.a`.
+The build script only enables external codec libraries when their flags are set to `yes`. x264, x265, and libvpx are built as Android static dependencies before FFmpeg configure runs, so FFmpeg can resolve their pkg-config files and static archives.
 
-Note: x264 is GPL-licensed. Keeping `ENABLE_X264=yes` means this FFmpeg build is a GPL build.
+Note: x264 and x265 are GPL-licensed. Keeping `ENABLE_X264=yes` and `ENABLE_X265=yes` means this FFmpeg build is a GPL build.
 
 ## Containers
 
@@ -330,6 +332,8 @@ The build downloads and prepares these source packages:
 - FontConfig 2.15.0
 - libass 0.17.1
 - x264 stable branch
+- x265 4.1
+- libvpx 1.15.2
 
 Sources are prepared under:
 
@@ -450,11 +454,15 @@ ANDROID_API=33
 TARGET_ARCH=aarch64
 TARGET_ABI=arm64-v8a
 ENABLE_MEDIACODEC=yes
+ENABLE_AVDEVICE=yes
 ENABLE_LIBASS=yes
 ENABLE_FREETYPE=yes
 ENABLE_HARFBUZZ=yes
 ENABLE_FRIBIDI=yes
 ENABLE_FONTCONFIG=yes
+ENABLE_X264=yes
+ENABLE_X265=yes
+ENABLE_LIBVPX=yes
 BUILD_FFMPEG=yes
 BUILD_FFPROBE=yes
 OUTPUT_SINGLE_SO=yes
@@ -526,6 +534,8 @@ ffmpeg -i input.mp4 output.webm
 - The default build is optimized for Android 13+ and `arm64-v8a`.
 - MediaCodec support depends on the runtime Android device.
 - x264 is enabled and built by default for the `libx264` H.264 software encoder.
-- x265, libvpx, libopus, and libmp3lame are not built unless explicitly enabled and added to the dependency build.
+- x265 is enabled and built by default for the `libx265` H.265 / HEVC software encoder.
+- libvpx is enabled and built by default for VP8 / VP9 software encoding and decoding.
+- libopus and libmp3lame are not built unless explicitly enabled and added to the dependency build.
 - The output is intentionally packaged as one shared library for easier mobile integration.
 - The CI build also uploads a normal Actions artifact, so release assets and workflow artifacts are both available.

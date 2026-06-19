@@ -93,7 +93,10 @@ jobs:
           - Node.js 24 GitHub Actions runtime
           - Android API 33+
           - Single shared library output: libffmpeg.so
+          - libavdevice enabled
           - libx264 enabled for H.264 software encoding
+          - libx265 enabled for H.265 / HEVC software encoding
+          - libvpx enabled for VP8 / VP9 software encoding and decoding
           - MediaCodec enabled for H.264 and HEVC hardware encoding
           - MediaCodec enabled for H.264, HEVC, VP8, and VP9 hardware decoding
           - libass subtitle rendering with FreeType, HarfBuzz, FriBidi, FontConfig, and Expat
@@ -104,7 +107,7 @@ jobs:
           - libffmpeg.so: direct shared library download
           - build-info.txt: build feature summary
 
-          Note: x264 is GPL-licensed, so this is a GPL FFmpeg build.
+          Note: x264 and x265 are GPL-licensed, so this is a GPL FFmpeg build.
           EOF
 
       - name: Update latest source tag

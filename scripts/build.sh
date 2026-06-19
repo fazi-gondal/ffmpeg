@@ -81,6 +81,7 @@ Core Libraries:
 - libavcodec
 - libavformat
 - libavfilter
+- libavdevice
 - libavutil
 - libswscale
 - libswresample
@@ -99,8 +100,11 @@ Software Video Codecs:
 - H.264
 - H.264 software encoder via libx264
 - H.265 / HEVC
+- H.265 / HEVC software encoder via libx265
 - VP8
+- VP8 software encoder/decoder via libvpx
 - VP9
+- VP9 software encoder/decoder via libvpx
 - MPEG-4 Part 2
 - MJPEG
 

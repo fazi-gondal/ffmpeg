@@ -222,6 +222,74 @@ if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
 fi
 
 # ==========================================
+# 7. X265 (H.265 / HEVC software encoder)
+# ==========================================
+
+if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
+  log "Building x265"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/x265"
+
+  rm -rf build
+  cmake -S source -B build \
+    -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="$ABI" \
+    -DANDROID_PLATFORM="android-$TARGET_API" \
+    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_SHARED=OFF \
+    -DENABLE_CLI=OFF \
+    -DENABLE_PIC=ON \
+    -DENABLE_TESTS=OFF
+
+  cmake --build build --parallel "$(nproc)"
+  cmake --install build
+
+  check_error "x265 build"
+fi
+
+# ==========================================
+# 8. LIBVPX (VP8 / VP9 software codecs)
+# ==========================================
+
+if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
+  log "Building libvpx"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/libvpx"
+
+  make distclean || true
+
+  CC="$CC" \
+  CXX="$CXX" \
+  AR="$AR" \
+  AS="$CC" \
+  LD="$CXX" \
+  NM="$NM" \
+  STRIP="$STRIP" \
+  ./configure \
+    --target=arm64-android-gcc \
+    --prefix="$PREFIX" \
+    --sdk-path="$NDK" \
+    --enable-vp8 \
+    --enable-vp9 \
+    --enable-pic \
+    --enable-static \
+    --disable-shared \
+    --disable-examples \
+    --disable-tools \
+    --disable-docs \
+    --disable-unit-tests \
+    --disable-install-bins \
+    --extra-cflags="$CFLAGS" \
+    --extra-ldflags="$LDFLAGS"
+
+  make -j$(nproc)
+  make install
+
+  check_error "libvpx build"
+fi
+
+# ==========================================
 # DONE
 # ==========================================
 
