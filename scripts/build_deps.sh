@@ -212,8 +212,7 @@ if [ "$ENABLE_X264" = "yes" ] || [ "$CODEC_X264" = "yes" ]; then
     --enable-pic \
     --disable-cli \
     --disable-opencl \
-    --extra-cflags="$CFLAGS" \
-    --extra-ldflags="-L$PREFIX/lib"
+    --extra-cflags="$CFLAGS"
 
   make -j$(nproc)
   make install
@@ -304,8 +303,7 @@ if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
     --disable-docs \
     --disable-unit-tests \
     --disable-install-bins \
-    --extra-cflags="$CFLAGS" \
-    --extra-ldflags="-L$PREFIX/lib"
+    --extra-cflags="$CFLAGS"
 
   make -j$(nproc)
   make install
