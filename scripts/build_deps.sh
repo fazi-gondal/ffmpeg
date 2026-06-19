@@ -230,17 +230,42 @@ if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
 
   cd "$PROJECT_ROOT/ffmpeg_sources/x265"
 
-  rm -rf build
+  rm -rf build-native build
+
+  env -u CC -u CXX -u CFLAGS -u CXXFLAGS -u LDFLAGS \
+  cmake -S source -B build-native \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_HOST_SYSTEM_NAME=Linux \
+    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
+    -DNATIVE_BUILD=ON \
+    -DENABLE_SHARED=OFF \
+    -DENABLE_CLI=OFF \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_ASSEMBLY=OFF
+
+  cmake --build build-native --parallel "$(nproc)"
+
+  env -u CFLAGS -u CXXFLAGS -u LDFLAGS \
   cmake -S source -B build \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI="$ABI" \
     -DANDROID_PLATFORM="android-$TARGET_API" \
+    -DCMAKE_HOST_SYSTEM_NAME=Linux \
+    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
+    -DCMAKE_SYSTEM_NAME=Android \
+    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="$CFLAGS" \
+    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+    -DNATIVE_BUILD=OFF \
     -DENABLE_SHARED=OFF \
     -DENABLE_CLI=OFF \
     -DENABLE_PIC=ON \
-    -DENABLE_TESTS=OFF
+    -DENABLE_TESTS=OFF \
+    -DENABLE_ASSEMBLY=OFF
 
   cmake --build build --parallel "$(nproc)"
   cmake --install build
