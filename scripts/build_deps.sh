@@ -289,7 +289,7 @@ if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
   AS="$CC" \
   LD="$CXX" \
   NM="$NM" \
-  STRIP="$STRIP" \
+  STRIP="true" \
   ./configure \
     --target=arm64-android-gcc \
     --prefix="$PREFIX" \
@@ -303,7 +303,6 @@ if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
     --disable-docs \
     --disable-unit-tests \
     --disable-install-bins \
-    --disable-strip \
     --extra-cflags="$CFLAGS"
 
   make -j$(nproc)

@@ -220,9 +220,10 @@ Build options are configured via files in `configs/`:
 During cross-compilation with Android NDK LLVM toolchain, `libvpx` configure step was attempting to strip intermediate object files (`libvpx_g.a(vpx_decoder.c.o)`) using `llvm-strip`, causing file format misinterpretation.
 
 #### Fix Applied
-Added `--disable-strip` to the `libvpx` configure invocation in [scripts/build_deps.sh](file:///d:/Expo/ffmpeg/scripts/build_deps.sh):
+Set `STRIP="true"` (a shell no-op) during the `libvpx` build step in [scripts/build_deps.sh](file:///d:/Expo/ffmpeg/scripts/build_deps.sh):
 
 ```bash
+STRIP="true" \
 ./configure \
   --target=arm64-android-gcc \
   --prefix="$PREFIX" \
@@ -236,11 +237,10 @@ Added `--disable-strip` to the `libvpx` configure invocation in [scripts/build_d
   --disable-docs \
   --disable-unit-tests \
   --disable-install-bins \
-  --disable-strip \
   --extra-cflags="$CFLAGS"
 ```
 
-This prevents `libvpx` from attempting intermediate stripping during library compilation, while keeping final binary stripping enabled in `build.sh` for `libffmpeg.so`.
+This ensures `libvpx` bypasses intermediate stripping during compilation without passing non-standard configure flags, while preserving binary stripping in `build.sh` for `libffmpeg.so`.
 
 ---
 
