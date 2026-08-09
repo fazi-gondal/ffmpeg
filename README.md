@@ -1,541 +1,396 @@
-# FFmpeg Android 13+ Builder for Expo / React Native
+# FFmpeg Android 13+ Builder for Expo & React Native
 
-This repository builds a custom FFmpeg Android package for Expo Nitro Modules, React Native native modules, and mobile video editor apps.
+A battle-tested, high-performance cross-compilation pipeline designed to build custom FFmpeg Android shared libraries (`libffmpeg.so`) optimized for **Expo Nitro Modules**, **React Native Native Modules**, and mobile video editor applications.
 
-The default target is:
+---
 
-- Android API 33+
-- ABI: `arm64-v8a`
-- Architecture: `aarch64`
-- Output: single shared library `libffmpeg.so`
-- Optional runtime tools: `ffmpeg` and `ffprobe`
-- CI: GitHub Actions with automatic artifact and GitHub Release upload
+## 📋 Table of Contents
 
-## What Gets Built
+- [Overview & Architectural Design](#-overview--architectural-design)
+- [What Gets Built](#-what-gets-built)
+- [Build Pipeline & Architecture](#-build-pipeline--architecture)
+- [Core FFmpeg & Dependency Stack](#-core-ffmpeg--dependency-stack)
+- [Hardware Acceleration (MediaCodec)](#-hardware-acceleration-mediacodec)
+- [Software Codecs & Containers](#-software-codecs--containers)
+- [Subtitle & Text Rendering Engine](#-subtitle--text-rendering-engine)
+- [Configuration Matrix](#-configuration-matrix)
+- [Troubleshooting & Solved Issues](#-troubleshooting--solved-issues)
+- [Local Build Prerequisites & Setup](#-local-build-prerequisites--setup)
+- [GitHub Actions & CI/CD](#-github-actions--cicd)
+- [Expo & React Native Integration Guide](#-expo--react-native-integration-guide)
+- [Example FFmpeg Commands](#-example-ffmpeg-commands)
+- [License & Legal Notice](#-license--legal-notice)
 
-The build produces:
+---
+
+## 🚀 Overview & Architectural Design
+
+This repository automates the compilation of FFmpeg for Android using modern toolchains and optimized target settings:
+
+- **Target OS & API**: Android API Level 33+ (Android 13+)
+- **Architecture**: `aarch64` (`arm64-v8a` ABI)
+- **Toolchain**: Android NDK `r26d` with Clang/LLVM cross-compilation
+- **Library Packaging**: Single merged shared library (`libffmpeg.so`) combining FFmpeg core, `libass` subtitle stack, `x264`, `x265`, and `libvpx`
+- **Optimization**: Link-Time Optimization (`ENABLE_LTO=yes`), symbol visibility hiding (`-Wl,--exclude-libs,ALL`), and post-build binary stripping (`llvm-strip`)
+- **CI/CD Pipeline**: Automated GitHub Actions running on Node.js 24 runtime, auto-publishing builds to GitHub Releases and Actions Artifacts
+
+---
+
+## 📦 What Gets Built
+
+### Local Build Outputs
+
+Running `bash scripts/build.sh` produces:
 
 ```text
 output/
-  libs/
-    libffmpeg.so
-  ffmpeg
-  ffprobe
-  build-info.txt
+├── libs/
+│   └── libffmpeg.so        # Monolithic shared library containing all codecs & libass
+├── ffmpeg                  # Standalone CLI tool (optional, controlled by BUILD_FFMPEG)
+├── ffprobe                 # Standalone probe tool (optional, controlled by BUILD_FFPROBE)
+└── build-info.txt          # Detailed compilation metadata & enabled features summary
 ```
 
-GitHub Actions also creates:
+### GitHub Actions Release Packages
+
+GitHub Actions creates:
 
 ```text
 release/
-  ffmpeg-android-arm64-v8a.tar.gz
-  libffmpeg.so
-  build-info.txt
+├── ffmpeg-android-arm64-v8a.tar.gz   # Full compressed output archive
+├── libffmpeg.so                     # Standalone shared library for direct download
+├── build-info.txt                   # Compilation summary and feature list
+└── release-notes.md                 # Markdown summary for GitHub Releases
 ```
 
-The release package contains the complete `output/` directory.
+---
 
-## Core FFmpeg Libraries
+## 🏗️ Build Pipeline & Architecture
 
-The final shared library is assembled from static FFmpeg libraries and selected subtitle/font dependencies:
+The build process is structured into decoupled, maintainable shell scripts in the `scripts/` directory:
 
-- `libavcodec`
-- `libavformat`
-- `libavfilter`
-- `libavdevice`
-- `libavutil`
-- `libswscale`
-- `libswresample`
-- `libass`
-- `fontconfig`
-- `freetype`
-- `harfbuzz`
-- `fribidi`
-- `expat`
+```text
+.
+├── configs/                # Configuration files defining feature flags
+│   ├── ffmpeg.conf         # Core build target, API level, & feature switches
+│   ├── codecs.conf         # Software & MediaCodec codec configurations
+│   ├── containers.conf     # Muxers & demuxers configuration
+│   ├── filters.conf        # Audio/video/text filter switches
+│   └── subtitles.conf      # Subtitle engine & font configuration
+├── scripts/
+│   ├── common.sh           # Environment loader (NDK paths, CC/CXX/AR/STRIP definitions)
+│   ├── validate_config.sh  # Pre-build validation of host tools & environment variables
+│   ├── prepare_sources.sh # Downloads & extracts FFmpeg and dependency source code
+│   ├── build_deps.sh       # Compiles dependency libraries (Expat, FreeType, HarfBuzz, FriBidi, FontConfig, libass, x264, x265, libvpx)
+│   ├── build_ffmpeg.sh     # Configures FFmpeg core, links static deps, and generates single libffmpeg.so
+│   └── build.sh            # Top-level orchestrator script
+```
 
-The final link step uses Android `clang`, permits FFmpeg internal duplicate helper symbols when flattening static archives into one `.so`, and hides archive symbols from the exported library surface.
+### Script Execution Sequence
 
-## Hardware Acceleration
+```mermaid
+graph TD
+    A[scripts/build.sh] --> B[scripts/common.sh]
+    A --> C[scripts/validate_config.sh]
+    A --> D[scripts/build_deps.sh]
+    D --> E[scripts/prepare_sources.sh]
+    D --> F[Build Expat, FreeType, HarfBuzz, FriBidi, FontConfig, libass]
+    D --> G[Build x264, x265, libvpx]
+    A --> H[scripts/build_ffmpeg.sh]
+    H --> I[Configure FFmpeg with MediaCodec & External Libs]
+    H --> J[Compile FFmpeg Static Archives]
+    H --> K[Merge Static Archives into libffmpeg.so]
+    A --> L[Strip libffmpeg.so]
+    A --> M[Generate build-info.txt]
+```
 
-MediaCodec is enabled for Android hardware acceleration:
+---
+
+## 📚 Core FFmpeg & Dependency Stack
+
+The single `libffmpeg.so` shared library is flattened from the following static components:
+
+### Core FFmpeg Libraries
+- `libavcodec` — Audio/video codecs
+- `libavformat` — Container demuxers and muxers
+- `libavfilter` — Video and audio processing filters
+- `libavdevice` — Input/output devices
+- `libavutil` — Core utility functions
+- `libswscale` — Color conversion and scaling
+- `libswresample` — Audio resampling and channel mixing
+
+### External Dependencies
+- `libass` (0.17.1) — Advanced SubStation Alpha subtitle renderer
+- `FontConfig` (2.15.0) — Font configuration and matching library
+- `FreeType` (2.13.2) — Font rasterization engine
+- `HarfBuzz` (8.5.0) — Text shaping engine for complex scripts
+- `FriBidi` (1.0.15) — Unicode Bidirectional Algorithm implementation
+- `Expat` (2.6.2) — XML parser (FontConfig dependency)
+- `x264` (stable branch) — H.264 software encoder
+- `x265` (4.1) — H.265 / HEVC software encoder
+- `libvpx` (1.15.2) — VP8 / VP9 software encoder and decoder
+
+---
+
+## ⚡ Hardware Acceleration (MediaCodec)
+
+Android MediaCodec hardware acceleration is enabled to offload video encoding and decoding to device NPU/GPU/VPU hardware:
 
 ### Hardware Decoders
-
 - `h264_mediacodec`
 - `hevc_mediacodec`
 - `vp8_mediacodec`
 - `vp9_mediacodec`
 
 ### Hardware Encoders
-
 - `h264_mediacodec`
 - `hevc_mediacodec`
 
-VP8 and VP9 MediaCodec support is decode-only in the current build script.
+*Note: VP8 and VP9 hardware support on Android is decode-only.*
 
-## Software Codecs
+---
 
-The config enables FFmpeg native codec support for common editor formats:
+## 🎞️ Software Codecs & Containers
 
-### Video Codecs
+### Native Video Codecs
+- **Decoders & Encoders**: H.264, H.265 / HEVC, VP8, VP9, MPEG-4 Part 2, MJPEG
 
-- H.264
-- H.265 / HEVC
-- VP8
-- VP9
-- MPEG-4 Part 2
-- MJPEG
+### Native Audio Codecs
+- **Decoders & Encoders**: AAC, MP3, FLAC, Opus, PCM / WAV
 
-### Audio Codecs
+### External Encoders & Decoders
+- `libx264`: H.264 software encoding (`ENABLE_X264=yes`)
+- `libx265`: H.265 / HEVC software encoding (`ENABLE_X265=yes`)
+- `libvpx`: VP8 and VP9 software encoding and decoding (`ENABLE_LIBVPX=yes`)
 
-- AAC
-- MP3
-- FLAC
-- Opus
-- PCM / WAV
+### Muxers & Demuxers
+- **Enabled Containers**: MP4, MOV, MKV (Matroska), WebM, MP3, WAV, FLAC
+- **Protocols**: `file`, `http`, `https`
 
-### External Codecs
+---
 
-Enabled by default:
+## 🎨 Subtitle & Text Rendering Engine
 
-- x264 H.264 encoder: `CODEC_X264=yes`, `ENABLE_X264=yes`
-- x265 H.265 / HEVC encoder: `CODEC_X265=yes`, `ENABLE_X265=yes`
-- libvpx VP8 / VP9 encoder and decoder: `CODEC_LIBVPX=yes`, `ENABLE_LIBVPX=yes`
+The build includes a full **libass** subtitle rendering engine supporting styled SSA/ASS, SRT, and WebVTT captions:
 
-Configured as optional and disabled by default:
+### Subtitle Features
+- Burn-in subtitle rendering directly into video frames (`-vf subtitles=...`)
+- Advanced SSA/ASS styled rendering with custom fonts
+- Font styling (bold, italic, underline, strikeout)
+- Custom outline stroke, drop shadows, and text background rectangles
+- Fine-grained x/y positioning and alignment controls
+- Full UTF-8 text support for international character sets
+- Right-to-Left (RTL) script support (Arabic, Urdu, Hebrew, Persian) via FriBidi and HarfBuzz shaping
+- System font integration (`/system/fonts`) and embedded font cache via FontConfig
 
-- AV1: `CODEC_AV1=no`, `ENABLE_AV1=no`
-- SVT-AV1: `CODEC_SVTAV1=no`, `ENABLE_SVTAV1=no`
-- rav1e: `CODEC_RAV1E=no`
-- Theora: `CODEC_THEORA=no`
-- Vorbis: `CODEC_VORBIS=no`
-- Speex: `CODEC_SPEEX=no`
-- ALAC: `CODEC_ALAC=no`
-- FDK-AAC: `CODEC_FDK_AAC=no`
+---
 
-The build script only enables external codec libraries when their flags are set to `yes`. x264, x265, and libvpx are built as Android static dependencies before FFmpeg configure runs, so FFmpeg can resolve their pkg-config files and static archives.
+## ⚙️ Configuration Matrix
 
-Note: x264 and x265 are GPL-licensed. Keeping `ENABLE_X264=yes` and `ENABLE_X265=yes` means this FFmpeg build is a GPL build.
+Build options are configured via files in `configs/`:
 
-## Containers
+### Key Flags (`configs/ffmpeg.conf`)
 
-### Muxers
+| Flag | Default | Description |
+| :--- | :--- | :--- |
+| `ANDROID_API` | `33` | Target Android API level |
+| `TARGET_ARCH` | `aarch64` | Target CPU architecture |
+| `TARGET_ABI` | `arm64-v8a` | Target Android ABI |
+| `ENABLE_MEDIACODEC` | `yes` | Enables Android MediaCodec hardware acceleration |
+| `ENABLE_LIBASS` | `yes` | Enables libass subtitle renderer |
+| `ENABLE_X264` | `yes` | Enables x264 software encoder |
+| `ENABLE_X265` | `yes` | Enables x265 HEVC software encoder |
+| `ENABLE_LIBVPX` | `yes` | Enables libvpx VP8/VP9 software encoder/decoder |
+| `ENABLE_LTO` | `yes` | Enables Link-Time Optimization |
+| `STRIP_BINARIES` | `yes` | Strips symbol tables from final output `.so` |
+| `OUTPUT_SINGLE_SO` | `yes` | Flattens all static archives into single `libffmpeg.so` |
 
-Enabled by config:
+---
 
-- MP4
-- MOV
-- MKV / Matroska
-- WebM
-- MP3
-- M4A
-- WAV
-- FLAC
+## 🛠️ Troubleshooting & Solved Issues
 
-The FFmpeg configure script currently enables:
+### Solved Issue: `llvm-strip` Failure during `libvpx` Compilation
 
-- `mp4`
-- `matroska`
-- `mov`
-- `webm`
-- `mp3`
-- `wav`
-- `flac`
-
-### Demuxers
-
-Enabled by config:
-
-- MP4
-- MOV
-- MKV / Matroska
-- WebM
-- MP3
-- M4A
-- WAV
-- FLAC
-
-The FFmpeg configure script currently enables:
-
-- `mp4`
-- `matroska`
-- `mov`
-- `webm`
-- `mp3`
-- `wav`
-- `flac`
-
-### Optional Containers Disabled by Default
-
-- AVI
-- FLV
-- 3GP
-- MPEG-TS
-- OGG
-- MXF
-- DASH
-- HLS
-- Smooth Streaming
-
-## Protocols
-
-Enabled protocols:
-
-- `file`
-- `http`
-- `https`
-
-## Filters
-
-### Video Filters
-
-Enabled or configured for the editor pipeline:
-
-- `scale`
-- `crop`
-- `overlay`
-- `rotate`
-- `fade`
-- `zoompan`
-- `subtitles`
-- flip support in config
-- fps conversion in config
-- setpts timeline support in config
-- framerate conversion in config
-- brightness/contrast support in config
-- hue/saturation support in config
-- gaussian blur support in config
-
-### Audio Filters
-
-Configured for audio editing:
-
-- `volume`
-- `amix`
-- `aresample`
-- `loudnorm`
-- audio trim
-- audio fade
-- multi-track audio support
-
-### Text and Subtitle Filters
-
-- `subtitles`
-- ASS subtitle rendering through libass
-- styled subtitles
-- custom font rendering
-- drawbox support in config
-- drawtext support in config
-
-## Subtitle and Text Rendering Stack
-
-The build includes a full libass subtitle stack:
-
-- `libass`
-- `FreeType`
-- `HarfBuzz`
-- `FriBidi`
-- `FontConfig`
-- `Expat`
-
-Supported subtitle features:
-
-- SRT
-- ASS
-- SSA
-- WebVTT
-- burn-in subtitles
-- styled subtitles
-- font size control
-- font color control
-- font style control
-- outline / stroke
-- shadow
-- text background
-- x/y positioning
-- alignment
-- multi-line captions
-- timed subtitles
-- UTF-8 text
-- RTL scripts such as Urdu, Arabic, Persian, and Hebrew
-- LTR scripts
-- bidirectional text shaping
-- custom fonts
-- system fonts
-- font cache
-
-Default subtitle renderer:
-
+#### Symptom
 ```text
-SUBTITLE_RENDER_MODE=libass
+/home/runner/work/ffmpeg/ffmpeg/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip: error: 'libvpx_g.a(vpx_decoder.c.o)': The file was not recognized as a valid object file
 ```
 
-Default font:
+#### Root Cause
+During cross-compilation with Android NDK LLVM toolchain, `libvpx` configure step was attempting to strip intermediate object files (`libvpx_g.a(vpx_decoder.c.o)`) using `llvm-strip`, causing file format misinterpretation.
 
-```text
-DEFAULT_FONT=Roboto
-```
-
-## Multi-Stream Editing Features
-
-Enabled by config:
-
-- multiple audio tracks
-- multiple video streams
-- multiple subtitle streams
-- metadata support
-- chapters support
-- faststart MP4 support
-- subtitle burn-in
-- frame accurate editing flag
-- timeline sync flag
-- sticker overlay flag
-- image overlay flag
-- speed control flag
-
-## Disabled Advanced Features
-
-These features are present as future config switches but disabled by default:
-
-- AV1 encoding
-- SVT-AV1
-- Vulkan
-- OpenCL
-- CUDA
-- VAAPI
-- Intel QSV
-- VideoToolbox
-- Dolby Vision
-- HDR10
-- HDR10+
-- xfade transitions
-- unsharp
-- chromakey
-- advanced keying
-- GL transform
-- Vulkan filters
-- subtitle animation
-- word-level karaoke timing
-- AI subtitle sync
-- translation subtitles
-- realtime subtitle editing
-
-## Source Dependencies
-
-The build downloads and prepares these source packages:
-
-- FFmpeg 8.1.2
-- Expat 2.6.2
-- FreeType 2.13.2
-- HarfBuzz 8.5.0
-- FriBidi 1.0.15
-- FontConfig 2.15.0
-- libass 0.17.1
-- x264 stable branch
-- x265 4.1
-- libvpx 1.15.2
-
-Sources are prepared under:
-
-```text
-ffmpeg_sources/
-```
-
-Android dependency outputs are installed under:
-
-```text
-deps/android/arm64-v8a/
-```
-
-## GitHub Actions
-
-Workflow file:
-
-```text
-.github/workflows/android.yml
-```
-
-### Triggers
-
-The workflow runs on:
-
-- manual dispatch from the GitHub Actions tab
-- pushed tags matching `v*`
-
-### Release Upload Behavior
-
-Tag builds publish a normal GitHub Release for the tag:
+#### Fix Applied
+Added `--disable-strip` to the `libvpx` configure invocation in [scripts/build_deps.sh](file:///d:/Expo/ffmpeg/scripts/build_deps.sh):
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+./configure \
+  --target=arm64-android-gcc \
+  --prefix="$PREFIX" \
+  --enable-vp8 \
+  --enable-vp9 \
+  --enable-pic \
+  --enable-static \
+  --disable-shared \
+  --disable-examples \
+  --disable-tools \
+  --disable-docs \
+  --disable-unit-tests \
+  --disable-install-bins \
+  --disable-strip \
+  --extra-cflags="$CFLAGS"
 ```
 
-Manual builds publish or update a normal release named:
+This prevents `libvpx` from attempting intermediate stripping during library compilation, while keeping final binary stripping enabled in `build.sh` for `libffmpeg.so`.
+
+---
+
+## 💻 Local Build Prerequisites & Setup
+
+### Environment Requirements
+
+- **OS**: Linux (Ubuntu 22.04 LTS or 24.04 LTS recommended) or WSL2 on Windows
+- **Android NDK**: Version `r26d`
+
+### Package Dependencies (Ubuntu / Debian)
+
+```bash
+sudo apt update && sudo apt install -y \
+  git \
+  wget \
+  unzip \
+  curl \
+  pkg-config \
+  build-essential \
+  autoconf \
+  automake \
+  cmake \
+  gettext \
+  gperf \
+  libtool \
+  xz-utils \
+  yasm \
+  nasm \
+  meson \
+  ninja-build
+```
+
+### Running the Build
+
+1. Download Android NDK r26d and export its path:
+   ```bash
+   wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
+   unzip android-ndk-r26d-linux.zip
+   export NDK=$PWD/android-ndk-r26d
+   ```
+
+2. Make scripts executable:
+   ```bash
+   chmod +x scripts/*.sh
+   ```
+
+3. Run the full build pipeline:
+   ```bash
+   bash scripts/build.sh
+   ```
+
+---
+
+## 🤖 GitHub Actions & CI/CD
+
+Workflow configuration is located in `.github/workflows/android.yml`.
+
+- **Triggers**: Manual trigger via `workflow_dispatch` or push of git tag `v*`
+- **Actions Runtime**: Node.js 24
+- **Artifacts**: Uploads `output/` directory as an artifact (`ffmpeg-android-arm64-v8a`)
+- **Releases**: Publishes compiled `libffmpeg.so` and `ffmpeg-android-arm64-v8a.tar.gz` directly to GitHub Releases using `softprops/action-gh-release@v3`
+
+---
+
+## 📱 Expo & React Native Integration Guide
+
+### 1. Place `libffmpeg.so` in your Android project
+
+Copy `libffmpeg.so` into your native Android module structure:
 
 ```text
-latest
+android/app/src/main/jniLibs/arm64-v8a/libffmpeg.so
 ```
 
-Manual builds also move the `latest` git tag to the current commit before publishing. That keeps GitHub's automatic source archives up to date:
+### 2. Loading the Library in Java/Kotlin
 
-- `Source code (zip)`
-- `Source code (tar.gz)`
+In your React Native Native Module or Expo Nitro Module:
 
-Both tag builds and manual builds are marked as the latest GitHub Release, not as prereleases.
+```kotlin
+package com.mycompany.ffmpeg
 
-Release assets:
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.Promise
 
-- `ffmpeg-android-arm64-v8a.tar.gz`
-- `libffmpeg.so`
-- `build-info.txt`
+class FFmpegModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
-Release notes are generated by the workflow and include the FFmpeg version, Node.js runtime, x264 support, MediaCodec support, and subtitle stack.
+    companion object {
+        init {
+            System.loadLibrary("ffmpeg")
+        }
+    }
 
-The workflow requires:
+    override fun getName(): String = "FFmpegModule"
 
-```yaml
-permissions:
-  contents: write
-```
-
-This is already configured so `softprops/action-gh-release` can create or update releases.
-
-## Local Build
-
-Install Android NDK r26d or compatible, then set:
-
-```bash
-export NDK=/path/to/android-ndk-r26d
-```
-
-Run:
-
-```bash
-bash scripts/build.sh
-```
-
-Validation only:
-
-```bash
-bash scripts/validate_config.sh
-```
-
-Build dependencies only:
-
-```bash
-bash scripts/build_deps.sh
-```
-
-Build FFmpeg only:
-
-```bash
-bash scripts/build_ffmpeg.sh
-```
-
-## Configuration Files
-
-Feature flags live in:
-
-```text
-configs/
-  ffmpeg.conf
-  codecs.conf
-  containers.conf
-  filters.conf
-  subtitles.conf
-```
-
-Important defaults:
-
-```bash
-FFMPEG_VERSION=8.1.2
-ANDROID_API=33
-TARGET_ARCH=aarch64
-TARGET_ABI=arm64-v8a
-ENABLE_MEDIACODEC=yes
-ENABLE_AVDEVICE=yes
-ENABLE_LIBASS=yes
-ENABLE_FREETYPE=yes
-ENABLE_HARFBUZZ=yes
-ENABLE_FRIBIDI=yes
-ENABLE_FONTCONFIG=yes
-ENABLE_X264=yes
-ENABLE_X265=yes
-ENABLE_LIBVPX=yes
-BUILD_FFMPEG=yes
-BUILD_FFPROBE=yes
-OUTPUT_SINGLE_SO=yes
-OUTPUT_NAME=libffmpeg.so
-ENABLE_LTO=yes
-STRIP_BINARIES=yes
-```
-
-## Expo / React Native Integration
-
-Use `output/libs/libffmpeg.so` in your Android native module or Expo Nitro module.
-
-Example TypeScript surface:
-
-```ts
-import { NativeModule } from 'react-native';
-
-export class FFmpegModule extends NativeModule {
-  execute(command: string): Promise<string>;
+    external fun executeFFmpegCommand(cmd: String): Int
 }
 ```
 
-Typical app workflows:
+### 3. CMake Integration (For Nitro Modules / C++ JNI)
 
-- video trim
-- crop / resize / rotate
-- overlay images or video
-- burn subtitles into video
-- render styled ASS captions
-- process multi-audio exports
-- mix audio tracks
-- normalize volume
-- generate social media MP4/WebM outputs
+In your `CMakeLists.txt`:
 
-## Example Commands
+```cmake
+add_library(ffmpeg SHARED IMPORTED)
+set_target_properties(ffmpeg PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libffmpeg.so"
+)
 
-Trim video:
-
-```bash
-ffmpeg -i input.mp4 -ss 00:00:05 -t 10 output.mp4
+target_link_libraries(
+    your_nitro_module
+    ffmpeg
+    log
+)
 ```
 
-Burn subtitles:
+---
 
+## 📝 Example FFmpeg Commands
+
+### Video Trimming (No Re-encoding)
 ```bash
-ffmpeg -i input.mp4 -vf subtitles=subtitles.srt output.mp4
+ffmpeg -ss 00:00:05 -i input.mp4 -t 10 -c copy output.mp4
 ```
 
-Overlay an image:
-
+### Hardware Accelerated Transcode (MediaCodec)
 ```bash
-ffmpeg -i video.mp4 -i sticker.png -filter_complex overlay=20:20 output.mp4
+ffmpeg -c:v h264_mediacodec -i input.mp4 -c:v h264_mediacodec -b:v 2M output.mp4
 ```
 
-Mix audio tracks:
-
+### Subtitle Burn-In with ASS Styling
 ```bash
-ffmpeg -i video.mp4 -i music.aac -filter_complex amix=inputs=2 output.mp4
+ffmpeg -i input.mp4 -vf "subtitles=captions.ass" output.mp4
 ```
 
-Export WebM:
-
+### Video Overlay (Sticker / Watermark)
 ```bash
-ffmpeg -i input.mp4 output.webm
+ffmpeg -i video.mp4 -i watermark.png -filter_complex "overlay=W-w-10:H-h-10" output.mp4
 ```
 
-## Notes
+### Audio Mixing
+```bash
+ffmpeg -i video.mp4 -i background_music.mp3 -filter_complex "[0:a][1:a]amix=inputs=2:duration=first[a]" -map 0:v -map "[a]" output.mp4
+```
 
-- The default build is optimized for Android 13+ and `arm64-v8a`.
-- MediaCodec support depends on the runtime Android device.
-- x264 is enabled and built by default for the `libx264` H.264 software encoder.
-- x265 is enabled and built by default for the `libx265` H.265 / HEVC software encoder.
-- libvpx is enabled and built by default for VP8 / VP9 software encoding and decoding.
-- libopus and libmp3lame are not built unless explicitly enabled and added to the dependency build.
-- The output is intentionally packaged as one shared library for easier mobile integration.
-- The CI build also uploads a normal Actions artifact, so release assets and workflow artifacts are both available.
+---
+
+## ⚖️ License & Legal Notice
+
+- **Build Infrastructure**: MIT License
+- **Generated Binaries**: GPL v3 / GPL v2 (due to inclusion of `x264` and `x265` static libraries).
+- If you require a **LGPL** build, set `ENABLE_GPL=no`, `ENABLE_X264=no`, and `ENABLE_X265=no` in `configs/ffmpeg.conf` and `configs/codecs.conf`.
