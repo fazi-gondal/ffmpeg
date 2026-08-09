@@ -23,7 +23,7 @@ mkdir -p "$BUILD_DIR"
 
 bash scripts/prepare_sources.sh
 
-export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$DEPS_PREFIX/lib64/pkgconfig:$DEPS_PREFIX/share/pkgconfig:$PKG_CONFIG_PATH"
 export PATH="$DEPS_PREFIX/bin:$PATH"
 
 cd "$FFMPEG_SRC"
@@ -206,8 +206,8 @@ CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 
 CONFIGURE_FLAGS="$CONFIGURE_FLAGS \
 --extra-cflags=-I$DEPS_PREFIX/include \
---extra-ldflags=-L$DEPS_PREFIX/lib \
---extra-libs=-llog \
+--extra-ldflags=\"-L$DEPS_PREFIX/lib -L$DEPS_PREFIX/lib64\" \
+--extra-libs=\"-llog -lstdc++ -lm\" \
 "
 
 # ==========================================

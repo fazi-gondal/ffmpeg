@@ -25,7 +25,7 @@ export PREFIX="$DEPS_PREFIX"
 # PATHS
 # ==========================================
 
-export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:$PREFIX/share/pkgconfig:$PKG_CONFIG_PATH"
 export PKG_CONFIG_SYSROOT_DIR=
 export PATH="$PREFIX/bin:$PATH"
 
@@ -114,6 +114,7 @@ rm -rf build
 meson setup build \
   --cross-file "$MESON_CROSS_FILE" \
   --prefix="$PREFIX" \
+  --libdir=lib \
   --buildtype=release \
   --default-library=static \
   -Dglib=disabled \
@@ -141,6 +142,7 @@ rm -rf build
 meson setup build \
   --cross-file "$MESON_CROSS_FILE" \
   --prefix="$PREFIX" \
+  --libdir=lib \
   --buildtype=release \
   --default-library=static \
   -Ddocs=false \
@@ -254,6 +256,7 @@ if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
     -DCMAKE_SYSTEM_NAME=Android \
     -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="$CFLAGS" \
     -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
@@ -268,6 +271,11 @@ if [ "$ENABLE_X265" = "yes" ] || [ "$CODEC_X265" = "yes" ]; then
 
   cmake --build build --parallel "$(nproc)"
   cmake --install build
+
+  if [ -d "$PREFIX/lib64" ]; then
+    mkdir -p "$PREFIX/lib"
+    cp -rn "$PREFIX/lib64/"* "$PREFIX/lib/" 2>/dev/null || true
+  fi
 
   check_error "x265 build"
 fi
