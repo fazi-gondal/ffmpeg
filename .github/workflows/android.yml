@@ -51,14 +51,12 @@ jobs:
           meson \
           ninja-build
 
-      - name: Download Android NDK
+      - name: Install Android NDK
         run: |
 
-          wget https://github.com/android/ndk/releases/download/${NDK_VERSION}/android-ndk-${NDK_VERSION}-linux.zip
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264"
 
-          unzip android-ndk-${NDK_VERSION}-linux.zip
-
-          echo "NDK=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+          echo "NDK=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
 
       - name: Make scripts executable
         run: |
