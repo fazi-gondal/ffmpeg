@@ -320,6 +320,107 @@ if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
 fi
 
 # ==========================================
+# 9. LAME (MP3 encoder)
+# ==========================================
+
+if [ "$ENABLE_LIBMP3LAME" = "yes" ] || [ "$CODEC_LIBMP3LAME" = "yes" ]; then
+  log "Building LAME (libmp3lame)"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/lame"
+
+  make distclean || true
+
+  ./configure $CONFIGURE_FLAGS \
+    --disable-frontend \
+    --disable-decoder \
+    --extra-cflags="$CFLAGS"
+
+  make -j$(nproc)
+  make install
+
+  check_error "LAME build"
+fi
+
+# ==========================================
+# 10. LIBAOM & LIBAVIF (AVIF image format support)
+# ==========================================
+
+if [ "$ENABLE_LIBAVIF" = "yes" ] || [ "$CODEC_LIBAVIF" = "yes" ]; then
+  log "Building libaom (AV1 library for libavif)"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/aom"
+
+  rm -rf build
+  mkdir -p build
+
+  cmake -S . -B build \
+    -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="$ABI" \
+    -DANDROID_PLATFORM="android-$TARGET_API" \
+    -DCMAKE_HOST_SYSTEM_NAME=Linux \
+    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
+    -DCMAKE_SYSTEM_NAME=Android \
+    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="$CFLAGS" \
+    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DENABLE_DOCS=OFF \
+    -DENABLE_EXAMPLES=OFF \
+    -DENABLE_TESTS=OFF \
+    -DENABLE_TOOLS=OFF \
+    -DCONFIG_AV1_ENCODER=1 \
+    -DCONFIG_AV1_DECODER=1 \
+    -DENABLE_NEON=ON
+
+  cmake --build build --parallel "$(nproc)"
+  cmake --install build
+
+  check_error "libaom build"
+
+  log "Building libavif"
+
+  cd "$PROJECT_ROOT/ffmpeg_sources/libavif"
+
+  rm -rf build
+  mkdir -p build
+
+  cmake -S . -B build \
+    -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="$ABI" \
+    -DANDROID_PLATFORM="android-$TARGET_API" \
+    -DCMAKE_HOST_SYSTEM_NAME=Linux \
+    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
+    -DCMAKE_SYSTEM_NAME=Android \
+    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="$CFLAGS" \
+    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DAVIF_CODEC_AOM=SYSTEM \
+    -DAVIF_BUILD_APPS=OFF \
+    -DAVIF_BUILD_TESTS=OFF
+
+  cmake --build build --parallel "$(nproc)"
+  cmake --install build
+
+  if [ -d "$PREFIX/lib64" ]; then
+    mkdir -p "$PREFIX/lib"
+    cp -rn "$PREFIX/lib64/"* "$PREFIX/lib/" 2>/dev/null || true
+  fi
+
+  check_error "libavif build"
+fi
+
+# ==========================================
 # DONE
 # ==========================================
 

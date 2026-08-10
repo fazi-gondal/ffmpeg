@@ -129,6 +129,8 @@ The single `libffmpeg.so` shared library is flattened from the following static 
 - `x264` (stable branch) — H.264 software encoder
 - `x265` (4.1) — H.265 / HEVC software encoder
 - `libvpx` (1.15.2) — VP8 / VP9 software encoder and decoder
+- `libmp3lame` (3.100) — High quality MP3 audio encoder
+- `libavif` (1.1.1) — AVIF image format encoder/decoder (powered by `libaom` 3.9.1)
 
 ---
 
@@ -152,8 +154,8 @@ Android MediaCodec hardware acceleration is enabled to offload video encoding an
 
 ## 🎞️ Software Codecs & Containers
 
-### Native Video Codecs
-- **Decoders & Encoders**: H.264, H.265 / HEVC, VP8, VP9, MPEG-4 Part 2, MJPEG
+### Native Video & Image Codecs
+- **Decoders & Encoders**: H.264, H.265 / HEVC, VP8, VP9, AVIF, MPEG-4 Part 2, MJPEG
 
 ### Native Audio Codecs
 - **Decoders & Encoders**: AAC, MP3, FLAC, Opus, PCM / WAV
@@ -162,6 +164,8 @@ Android MediaCodec hardware acceleration is enabled to offload video encoding an
 - `libx264`: H.264 software encoding (`ENABLE_X264=yes`)
 - `libx265`: H.265 / HEVC software encoding (`ENABLE_X265=yes`)
 - `libvpx`: VP8 and VP9 software encoding and decoding (`ENABLE_LIBVPX=yes`)
+- `libmp3lame`: High quality MP3 software encoding (`ENABLE_LIBMP3LAME=yes`)
+- `libavif`: AVIF image format encoding and decoding (`ENABLE_LIBAVIF=yes`)
 
 ### Muxers & Demuxers
 - **Enabled Containers**: MP4, MOV, MKV (Matroska), WebM, MP3, WAV, FLAC

@@ -123,6 +123,10 @@ if [ "$ENABLE_LIBMP3LAME" = "yes" ] || [ "$CODEC_LIBMP3LAME" = "yes" ]; then
   CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame"
 fi
 
+if [ "$ENABLE_LIBAVIF" = "yes" ] || [ "$CODEC_LIBAVIF" = "yes" ]; then
+  CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libavif"
+fi
+
 # ==========================================
 # SUBTITLES STACK
 # ==========================================
@@ -268,6 +272,19 @@ fi
 if [ "$ENABLE_LIBVPX" = "yes" ] || [ "$CODEC_LIBVPX" = "yes" ]; then
   DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
 $DEPS_PREFIX/lib/libvpx.a
+"
+fi
+
+if [ "$ENABLE_LIBMP3LAME" = "yes" ] || [ "$CODEC_LIBMP3LAME" = "yes" ]; then
+  DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
+$DEPS_PREFIX/lib/libmp3lame.a
+"
+fi
+
+if [ "$ENABLE_LIBAVIF" = "yes" ] || [ "$CODEC_LIBAVIF" = "yes" ]; then
+  DEPS_STATIC_LIBS="$DEPS_STATIC_LIBS
+$DEPS_PREFIX/lib/libavif.a
+$DEPS_PREFIX/lib/libaom.a
 "
 fi
 

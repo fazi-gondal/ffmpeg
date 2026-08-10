@@ -97,6 +97,8 @@ jobs:
           - libx264 enabled for H.264 software encoding
           - libx265 enabled for H.265 / HEVC software encoding
           - libvpx enabled for VP8 / VP9 software encoding and decoding
+          - libmp3lame enabled for high quality MP3 encoding
+          - libavif enabled for AVIF image encoding and decoding via libaom
           - MediaCodec enabled for H.264 and HEVC hardware encoding
           - MediaCodec enabled for H.264, HEVC, VP8, and VP9 hardware decoding
           - libass subtitle rendering with FreeType, HarfBuzz, FriBidi, FontConfig, and Expat

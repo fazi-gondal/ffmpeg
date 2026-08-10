@@ -96,7 +96,7 @@ Hardware Encoders:
 - h264_mediacodec
 - hevc_mediacodec
 
-Software Video Codecs:
+Software Video & Image Codecs:
 - H.264
 - H.264 software encoder via libx264
 - H.265 / HEVC
@@ -105,12 +105,13 @@ Software Video Codecs:
 - VP8 software encoder/decoder via libvpx
 - VP9
 - VP9 software encoder/decoder via libvpx
+- AVIF image support via libavif + libaom
 - MPEG-4 Part 2
 - MJPEG
 
 Software Audio Codecs:
 - AAC
-- MP3
+- MP3 (encoding via libmp3lame)
 - FLAC
 - Opus
 - PCM / WAV
