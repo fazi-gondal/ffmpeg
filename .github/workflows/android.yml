@@ -54,7 +54,11 @@ jobs:
       - name: Install Android NDK
         run: |
 
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264"
+          for attempt in 1 2 3; do
+            echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264" && break
+            echo "Attempt $attempt failed, retrying in 30s..."
+            sleep 30
+          done
 
           echo "NDK=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
 

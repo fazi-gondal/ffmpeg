@@ -30,7 +30,14 @@ download_source() {
   fi
 
   echo "Downloading $name $version"
-  curl -L --fail --retry 3 -o "$archive" "$url"
+  curl -L --fail \
+    --retry 5 \
+    --retry-delay 10 \
+    --retry-max-time 300 \
+    --retry-connrefused \
+    --connect-timeout 30 \
+    --max-time 600 \
+    -o "$archive" "$url"
 
   mkdir -p "$dest"
   tar -xf "$archive" -C "$dest" --strip-components=1
