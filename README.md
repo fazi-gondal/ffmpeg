@@ -1,6 +1,6 @@
 # FFmpeg Android 13+ Builder for Expo & React Native
 
-A battle-tested, high-performance cross-compilation pipeline designed to build custom FFmpeg Android shared libraries (`libffmpeg.so`) optimized for **Expo Nitro Modules**, **React Native Native Modules**, and mobile video editor applications.
+A battle-tested, high-performance cross-compilation pipeline designed to build custom FFmpeg Android shared libraries (`libffmpeg.so`) optimized for **Expo Nitro Modules**, **FFMPEG Expo Module**, **React Native Native Modules**, and mobile video editor applications.
 
 ---
 
