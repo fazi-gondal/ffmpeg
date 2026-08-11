@@ -398,3 +398,14 @@ ffmpeg -i video.mp4 -i background_music.mp3 -filter_complex "[0:a][1:a]amix=inpu
 - **Build Infrastructure**: MIT License
 - **Generated Binaries**: GPL v3 / GPL v2 (due to inclusion of `x264` and `x265` static libraries).
 - If you require a **LGPL** build, set `ENABLE_GPL=no`, `ENABLE_X264=no`, and `ENABLE_X265=no` in `configs/ffmpeg.conf` and `configs/codecs.conf`.
+
+***
+Fazi gondal
+***
+
+
+This is what I want to achieve
+1. I am creating a Expo module which use ffmpeg to edit videos
+2. I want to use this project to build ffmpeg for my module
+3. I have already created a Expo module named expo-video-editor and I want to use this project to build ffmpeg for my module
+4. Now I want to use this project to build ffmpeg for my mobile app which is a video editor app and I want to use this project to build ffmpeg for my app
