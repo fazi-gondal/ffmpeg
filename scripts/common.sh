@@ -19,6 +19,10 @@ OUTPUT_DIR="$PROJECT_ROOT/output"
 # LOAD CONFIG FILES
 # ==========================================
 
+for conf in "$CONFIG_DIR"/*.conf; do
+  [ -f "$conf" ] && sed -i 's/\r$//' "$conf" 2>/dev/null || true
+done
+
 source "$CONFIG_DIR/ffmpeg.conf"
 source "$CONFIG_DIR/codecs.conf"
 source "$CONFIG_DIR/containers.conf"
