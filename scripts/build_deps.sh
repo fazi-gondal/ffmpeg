@@ -330,10 +330,13 @@ if [ "$ENABLE_LIBMP3LAME" = "yes" ] || [ "$CODEC_LIBMP3LAME" = "yes" ]; then
 
   make distclean || true
 
+  # Pass CFLAGS via env - LAME's autoconf does not support --extra-cflags
+  # --disable-asm avoids nasm x86 assembly when cross-compiling to ARM64
+  CFLAGS="$CFLAGS" \
   ./configure $CONFIGURE_FLAGS \
     --disable-frontend \
     --disable-decoder \
-    --extra-cflags="$CFLAGS"
+    --disable-asm
 
   make -j$(nproc)
   make install
@@ -353,29 +356,27 @@ if [ "$ENABLE_LIBAVIF" = "yes" ] || [ "$CODEC_LIBAVIF" = "yes" ]; then
   rm -rf build
   mkdir -p build
 
+  # Let the NDK toolchain file handle system/CPU detection automatically.
+  # ENABLE_NASM=OFF: nasm produces x86 code, not ARM64 - disable for cross-compile.
+  # CONFIG_RUNTIME_CPU_DETECT=0: avoid runtime CPU probing which breaks in cross-compile.
   cmake -S . -B build \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI="$ABI" \
     -DANDROID_PLATFORM="android-$TARGET_API" \
-    -DCMAKE_HOST_SYSTEM_NAME=Linux \
-    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
-    -DCMAKE_SYSTEM_NAME=Android \
-    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="$CFLAGS" \
     -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
-    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
-    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
     -DBUILD_SHARED_LIBS=OFF \
     -DENABLE_DOCS=OFF \
     -DENABLE_EXAMPLES=OFF \
     -DENABLE_TESTS=OFF \
     -DENABLE_TOOLS=OFF \
+    -DENABLE_NASM=OFF \
+    -DCONFIG_RUNTIME_CPU_DETECT=0 \
     -DCONFIG_AV1_ENCODER=1 \
-    -DCONFIG_AV1_DECODER=1 \
-    -DENABLE_NEON=ON
+    -DCONFIG_AV1_DECODER=1
 
   cmake --build build --parallel "$(nproc)"
   cmake --install build
@@ -389,21 +390,18 @@ if [ "$ENABLE_LIBAVIF" = "yes" ] || [ "$CODEC_LIBAVIF" = "yes" ]; then
   rm -rf build
   mkdir -p build
 
+  # CMAKE_PREFIX_PATH tells CMake where to find the libaom package config
+  # that was installed in the previous step.
   cmake -S . -B build \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI="$ABI" \
     -DANDROID_PLATFORM="android-$TARGET_API" \
-    -DCMAKE_HOST_SYSTEM_NAME=Linux \
-    -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 \
-    -DCMAKE_SYSTEM_NAME=Android \
-    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
     -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_PREFIX_PATH="$PREFIX" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_FLAGS="$CFLAGS" \
     -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
-    -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
-    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS" \
     -DBUILD_SHARED_LIBS=OFF \
     -DAVIF_CODEC_AOM=SYSTEM \
     -DAVIF_BUILD_APPS=OFF \

@@ -30,7 +30,7 @@ download_source() {
   fi
 
   echo "Downloading $name $version"
-  curl -L --fail \
+  curl -A "Mozilla/5.0" -L --fail \
     --retry 5 \
     --retry-delay 10 \
     --retry-max-time 300 \
@@ -54,7 +54,7 @@ download_source "x264" "stable" "https://code.videolan.org/videolan/x264/-/archi
 download_source "x265" "4.1" "https://bitbucket.org/multicoreware/x265_git/get/4.1.tar.gz"
 download_source "libvpx" "1.15.2" "https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.2.tar.gz"
 download_source "lame" "3.100" "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz"
-download_source "aom" "3.9.1" "https://github.com/jbeich/aom/archive/refs/tags/v3.9.1.tar.gz"
+download_source "aom" "3.9.1" "https://github.com/AOMediaCodec/aom/archive/refs/tags/v3.9.1.tar.gz"
 download_source "libavif" "1.1.1" "https://github.com/AOMediaCodec/libavif/archive/refs/tags/v1.1.1.tar.gz"
 download_source "ffmpeg" "$FFMPEG_VERSION" "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"
 
