@@ -53,14 +53,33 @@ jobs:
 
       - name: Install Android NDK
         run: |
+          NDK_DIR="$ANDROID_HOME/ndk/26.3.11579264"
+          if [ -d "$NDK_DIR" ]; then
+            echo "✅ Pre-installed NDK found at $NDK_DIR"
+            echo "NDK=$NDK_DIR" >> $GITHUB_ENV
+            exit 0
+          fi
 
+          echo "Installing NDK via sdkmanager..."
           for attempt in 1 2 3; do
-            echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264" && break
-            echo "Attempt $attempt failed, retrying in 30s..."
-            sleep 30
+            echo "Attempt $attempt: Installing NDK via sdkmanager..."
+            echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --verbose "ndk;26.3.11579264" && break
+            if [ $attempt -lt 3 ]; then
+              echo "Attempt $attempt failed, retrying in 45s..."
+              sleep 45
+            fi
           done
 
-          echo "NDK=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          if [ ! -d "$NDK_DIR" ]; then
+            echo "sdkmanager failed, downloading direct NDK zip with browser User-Agent..."
+            curl -A "Mozilla/5.0 (X11; Linux x86_64)" -L --fail --retry 5 --retry-delay 10 \
+              -o android-ndk-r26d-linux.zip \
+              "https://dl.google.com/android/repository/android-ndk-r26d-linux.zip"
+            unzip -q android-ndk-r26d-linux.zip
+            NDK_DIR="$PWD/android-ndk-r26d"
+          fi
+
+          echo "NDK=$NDK_DIR" >> $GITHUB_ENV
 
       - name: Make scripts executable
         run: |
